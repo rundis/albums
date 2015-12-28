@@ -1,0 +1,60 @@
+= Albums Haskell/Elm App
+Sample application for my blog series on creating a Single Page CRUD app using Elm and Haskell
+v0.1.0, 2015-12-29: published
+:library: Asciidoctor
+:numbered:
+:idprefix:
+:toc: macro
+
+
+
+
+== Preconditions
+
+=== Backend
+The backend is written in Haskell and uses https://haskell-servant.github.io/[servant] to serve
+a REST-api.
+
+.You will need to install:
+. Haskell (and Cabal). You might want to install https://www.haskell.org/platform/[Haskell platform]
+
+=== Frontend
+The frontend is written in http://elm-lang.org/[Elm]
+
+.You will need to install:
+. http://elm-lang.org/install[Elm platform]
+
+
+
+== Get it up and running
+
+Firstly just clone this repo. If you wish to try out the demo app corresponding with
+a particular episode of the accompanying blog series, checkout the appropriate tag (named after each episode)
+
+
+=== Backend
+. Open a terminal and cd to `$albums/backend`
+. `cabal sandbox init && cabal update && cabal init`
+. `cabal install --only-dependencies && cabal configure`
+. `cabal build`
+. `cabal run`
+
+You may test that it's up and running by `curl http://localhost:8081/artists/1`
+
+
+
+=== Frontend
+. Open a terminal and cd to `$albums/frontend`
+. `elm-package install --yes`
+. `elm-make Album.elm --output album.js`
+. `elm-reactor`
+
+Open a browser window with the following url: `http://localhost:8000/index.html`
+
+WARNING: You will run into a https://en.wikipedia.org/wiki/Cross-origin_resource_sharing[CORS] issue
+since the frontend is hosted by elm-reactor on a separate port from the rest services hosted by the servant server.
+There are a couple of options for handling this (until Servant gets proper cors support). The simplest option
+is to install https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi[this] Chrome plugin.
+Another option would be for you to set up something like nginx in front of both servers.
+
+
