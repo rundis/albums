@@ -24,7 +24,6 @@ data Artist = Artist
 
 instance ToJSON Artist
 
-
 type ArtistAPI =
        Get '[JSON] [Artist]
   :<|> Capture "artistId" Int :> Get '[JSON] Artist
