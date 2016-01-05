@@ -14,6 +14,7 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant
 import Control.Monad.Trans.Either
+import Network.Wai.Middleware.Cors
 
 
 data Artist = Artist
@@ -77,4 +78,4 @@ app = serve api artistsServer
 
 
 main :: IO ()
-main = run 8081 app
+main = do run 8081 $ simpleCors $ app
