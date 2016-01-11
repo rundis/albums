@@ -25,15 +25,19 @@ findArtists conn =
   Sql.query_ conn "select * from artist" :: IO [M.Artist]
 
 
-newArtist :: Sql.Connection -> M.Artist -> IO ()
-newArtist conn artist =
+newArtist :: Sql.Connection -> M.Artist -> IO M.Artist
+newArtist conn artist = do
   Sql.execute conn "insert into artist (name) values (?) " (Sql.Only $ M.artistName artist)
+  rawId <- lastInsertRowId conn
+  let updArtist = artist { M.artistId = Just (fromIntegral rawId) }
+  return updArtist
 
 
 -- Really we should check whether the artist exists here
-updateArtist :: Sql.Connection -> M.Artist -> Int -> IO ()
-updateArtist conn artist idParam =
+updateArtist :: Sql.Connection -> M.Artist -> Int -> IO M.Artist
+updateArtist conn artist idParam = do
   Sql.executeNamed conn "update artist set name = :name where id = :id" params
+  return artist
   where
     params = [":id" := (idParam :: Int), ":name" := ((M.artistName artist) :: String)]
 

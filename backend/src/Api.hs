@@ -17,9 +17,9 @@ instance FromJSON M.Artist
 
 type ArtistAPI =
        Get '[JSON] [M.Artist]
-  :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] ()
+  :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
   :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
-  :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] ()
+  :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] M.Artist
   :<|> Capture "artistId" Int :> Delete '[] ()
 
 
