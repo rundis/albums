@@ -27,8 +27,27 @@ withTestConnection cb =
     withConn = bracket testConnect Sql.close
 
 
+albumCors :: Middleware
+albumCors = cors $ const (Just albumResourcePolicy)
+
+
+albumResourcePolicy :: CorsResourcePolicy
+albumResourcePolicy =
+    CorsResourcePolicy
+        { corsOrigins = Nothing -- gives you /*
+        , corsMethods = ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTION"]
+        , corsRequestHeaders = simpleHeaders -- adds "Content-Type" to defaults
+        , corsExposedHeaders = Nothing
+        , corsMaxAge = Nothing
+        , corsVaryOrigin = False
+        , corsRequireOrigin = False
+        , corsIgnoreFailures = False
+        }
+
+
+
 main :: IO ()
 main = do
   withTestConnection $ \conn ->  do
     S.bootstrapDB conn
-    run 8081 $ simpleCors $ (app conn)
+    run 8081 $ albumCors $ app conn
