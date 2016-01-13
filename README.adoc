@@ -46,15 +46,10 @@ You may test that it's up and running by `curl http://localhost:8081/artists/1`
 === Frontend
 . Open a terminal and cd to `$albums/frontend`
 . `elm-package install --yes`
-. `elm-make Album.elm --output album.js`
+. `elm-make Main.elm --output main.js`
 . `elm-reactor`
 
 Open a browser window with the following url: `http://localhost:8000/index.html`
 
-WARNING: You will run into a https://en.wikipedia.org/wiki/Cross-origin_resource_sharing[CORS] issue
-since the frontend is hosted by elm-reactor on a separate port from the rest services hosted by the servant server.
-There are a couple of options for handling this (until Servant gets proper cors support). The simplest option
-is to install https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi[this] Chrome plugin.
-Another option would be for you to set up something like nginx in front of both servers.
 
 
