@@ -1,4 +1,4 @@
-module Album where
+module Main where
 
 
 import ArtistListing
@@ -8,7 +8,6 @@ import Html.Events exposing (onClick)
 import Task exposing (..)
 import Effects exposing (Effects, Never)
 import StartApp
-import Debug
 
 
 type alias Model =
@@ -31,18 +30,18 @@ init =
 
 
 
+
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
+
     ShowHomePage ->
       let
         (artistListing, fx) = ArtistListing.init
       in
-        Debug.log "Show homepage"
         ( {model | artistListing = artistListing}
         , Effects.map ArtistListingAction fx
         )
-
 
     ArtistListingAction sub ->
       let
@@ -63,7 +62,6 @@ menu address model =
       ]
     ]
   ]
-
 
 
 view : Signal.Address Action -> Model -> Html

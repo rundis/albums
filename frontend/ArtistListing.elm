@@ -19,7 +19,6 @@ type alias Model =
   , page : Page}
 
 
-
 type Action =
     HandleArtistsRetrieved (Maybe (List Artist))
   | SelectArtist (Int)
@@ -55,29 +54,17 @@ update action model =
       (model, getArtists HandleArtistsRetrieved)
 
     NewArtist ->
-      let
-        (detailModel, fx) = ArtistDetail.update (ArtistDetail.ShowArtist Nothing) model.artistDetail
-      in
-        ( { model | artistDetail = detailModel
-                  , page = ArtistDetailPage }
-        , Effects.map ArtistDetailAction fx
-        )
-
+      update (ArtistDetailAction <| ArtistDetail.ShowArtist Nothing) model
 
     SelectArtist id ->
-      let
-        (detailModel, fx) = ArtistDetail.update (ArtistDetail.GetArtist id) model.artistDetail
-      in
-        ( { model | artistDetail = detailModel
-                  , page = ArtistDetailPage }
-        , Effects.map ArtistDetailAction fx
-        )
+      update (ArtistDetailAction <| ArtistDetail.GetArtist id) model
 
     ArtistDetailAction sub ->
       let
         (detailModel, fx) = ArtistDetail.update sub model.artistDetail
       in
-        ( {model | artistDetail = detailModel}
+        ( { model | artistDetail = detailModel
+                  , page = ArtistDetailPage }
         , Effects.map ArtistDetailAction fx -- handle fx !
         )
 
@@ -88,7 +75,7 @@ artistRow : Signal.Address Action -> Artist -> Html
 artistRow address artist =
   tr [] [
      td [] [text artist.name]
-    ,td [] [button [ onClick address (SelectArtist artist.id) ] [text "Edit"]] --(Signal.forwardTo address (ArtistDetail.GetArtist (.id artist))) ] [ text "Edit" ]]
+    ,td [] [button [ onClick address (SelectArtist artist.id) ] [text "Edit"]]
     ,td [] [button [ onClick address (DeleteArtist (.id artist))] [ text "Delete!" ]]
   ]
 

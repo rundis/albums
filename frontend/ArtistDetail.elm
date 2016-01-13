@@ -76,10 +76,18 @@ update action model =
       )
 
 
+pageTitle : Model -> String
+pageTitle model =
+  case model.id of
+    Just x -> "Edit artist"
+    Nothing -> "New artist"
+
+
+
 view : Signal.Address Action -> Model -> Html
 view address model =
   div [] [
-      h1 [] [text "Edit artist"]
+      h1 [] [text <| pageTitle model]
     , Html.form [class "form-horizontal"] [
         div [class "form-group"] [
             label [class "col-sm-2 control-label"] [text "Name"]
