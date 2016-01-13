@@ -37,7 +37,7 @@ newArtist conn artist = do
 updateArtist :: Sql.Connection -> M.Artist -> Int -> IO M.Artist
 updateArtist conn artist idParam = do
   Sql.executeNamed conn "update artist set name = :name where id = :id" params
-  return artist
+  return artist { M.artistId = Just idParam }
   where
     params = [":id" := (idParam :: Int), ":name" := ((M.artistName artist) :: String)]
 
