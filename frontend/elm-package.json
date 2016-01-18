@@ -4,11 +4,15 @@
     "repository": "https://github.com/rundis/albums.git",
     "license": "MIT",
     "source-directories": [
-        "."
+        ".",
+        "src/"
     ],
     "exposed-modules": [],
     "dependencies": {
         "elm-lang/core": "3.0.0 <= v < 4.0.0",
+        "etaque/elm-route-parser": "2.1.0 <= v < 3.0.0",
+        "etaque/elm-transit-router": "1.0.1 <= v < 2.0.0",
+        "etaque/elm-transit-style": "1.0.1 <= v < 2.0.0",
         "evancz/elm-effects": "2.0.1 <= v < 3.0.0",
         "evancz/elm-html": "4.0.2 <= v < 5.0.0",
         "evancz/elm-http": "3.0.0 <= v < 4.0.0",

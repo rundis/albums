@@ -23,11 +23,9 @@ type Action =
   | HandleSaved (Maybe Artist)
 
 
-init : (Model, Effects Action)
+init : Model
 init =
-  ( Model Nothing ""
-  , Effects.none
-  )
+   Model Nothing ""
 
 
 update : Action -> Model -> (Model, Effects Action)
