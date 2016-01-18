@@ -2,6 +2,7 @@ module ArtistDetail (Model, Action (..), init, view, update) where
 
 
 import ServerApi exposing (Artist, ArtistRequest, getArtist, updateArtist, createArtist)
+import Routes
 import Effects exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -16,7 +17,8 @@ type alias Model =
 
 
 type Action =
-    GetArtist (Int)
+    NoOp
+  | GetArtist (Int)
   | ShowArtist (Maybe Artist)
   | SetArtistName (String)
   | SaveArtist
@@ -31,6 +33,9 @@ init =
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
+
+    NoOp ->
+      (model, Effects.none)
 
     GetArtist id ->
       (model, getArtist id ShowArtist)
@@ -61,7 +66,7 @@ update action model =
         Just artist ->
           ({ model | id = Just artist.id
                    , name = artist.name }
-            , Effects.none
+            , Effects.map (\_ -> NoOp) (Routes.redirect Routes.ArtistListingPage)
           )
 
         Nothing ->

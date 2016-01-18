@@ -2,14 +2,12 @@ module ArtistListing (Model, Action (..), init, view, update) where
 
 
 import ServerApi exposing (..)
+import Routes
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, on, targetValue)
 import Http
 import Effects exposing (Effects, Never)
-import Json.Decode as Json
-import TransitRouter
-
 
 
 type alias Model =
@@ -53,7 +51,7 @@ artistRow : Signal.Address Action -> Artist -> Html
 artistRow address artist =
   tr [] [
      td [] [text artist.name]
-    ,td [] [button [ on "click" Json.value (\_ ->  Signal.message TransitRouter.pushPathAddress ("/artist/" ++ (toString artist.id) ))] [text "Edit"]]
+    ,td [] [button [ Routes.clickAttr <| Routes.ArtistDetailPage artist.id ] [text "Edit"]]
     ,td [] [button [ onClick address (DeleteArtist (.id artist))] [ text "Delete!" ]]
   ]
 
@@ -63,7 +61,8 @@ view address model =
   div [] [
       h1 [] [text "Artists" ]
     , button [
-          class "pull-right btn btn-default"
+            class "pull-right btn btn-default"
+          , Routes.clickAttr Routes.NewArtistPage
         ]
         [text "New Artist"]
     , table [class "table table-striped"] [

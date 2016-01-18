@@ -6,14 +6,15 @@ import TransitRouter
 import Html exposing (Attribute)
 import Html.Attributes exposing (href)
 import Json.Decode as Json
-import Html.Events exposing (onClick, onWithOptions)
-import Signal exposing (message)
+import Html.Events exposing (on, onClick, onWithOptions)
+import Signal
 
 
 type Route
   = Home
   | ArtistListingPage
   | ArtistDetailPage Int
+  | NewArtistPage
   | EmptyRoute
 
 
@@ -21,6 +22,7 @@ routeParsers : List (Matcher Route)
 routeParsers =
   [ static Home "/"
   , static ArtistListingPage "/artists"
+  , static NewArtistPage "/artists/new"
   , dyn1 ArtistDetailPage "/artists/" int ""
   ]
 
@@ -36,9 +38,9 @@ encode route =
   case route of
     Home -> "/"
     ArtistListingPage   -> "/artists"
+    NewArtistPage       -> "/artists/new"
     ArtistDetailPage  i -> "/artists/" ++ toString i
     EmptyRoute -> ""
-
 
 
 redirect : Route -> Effects ()
@@ -48,14 +50,20 @@ redirect route =
     |> Effects.task
 
 
-clickTo : String -> List Attribute
-clickTo path =
-  [ href path
-  , onWithOptions
-      "click"
-      { stopPropagation = True, preventDefault = True }
-      Json.value
-      (\_ ->  message TransitRouter.pushPathAddress path)
-  ]
+clickAttr : Route -> Attribute
+clickAttr route =
+  on "click" Json.value (\_ ->  Signal.message TransitRouter.pushPathAddress <| encode route)
 
--- (Debug.log ("Gotos: " ++ toString (decode path)))
+
+linkAttrs : Route -> List Attribute
+linkAttrs route =
+  let
+    path = encode route
+  in
+    [ href path
+    , onWithOptions
+        "click"
+        { stopPropagation = True, preventDefault = True }
+        Json.value
+        (\_ ->  Signal.message TransitRouter.pushPathAddress path)
+    ]

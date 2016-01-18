@@ -43,10 +43,29 @@ initialModel =
   }
 
 
-
 actions : Signal Action
 actions =
   Signal.map RouterAction TransitRouter.actions
+
+
+mountRoute : Route -> Route -> Model -> (Model, Effects Action)
+mountRoute prevRoute route model =
+  case route of
+
+    Home ->
+      (model, Effects.none)
+
+    ArtistListingPage ->
+      (model, Effects.map ArtistListingAction (ServerApi.getArtists ArtistListing.HandleArtistsRetrieved))
+
+    ArtistDetailPage artistId ->
+      (model, Effects.map ArtistDetailAction (ServerApi.getArtist artistId ArtistDetail.ShowArtist))
+
+    NewArtistPage ->
+      ({ model | artistDetailModel = ArtistDetail.init } , Effects.none)
+
+    EmptyRoute ->
+      (model, Effects.none)
 
 
 routerConfig : TransitRouter.Config Routes.Route Action Model
@@ -66,8 +85,7 @@ init path =
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
-  Debug.log ("Action : " ++ (toString action))
-  (case action of
+  case action of
 
     NoOp ->
       (model, Effects.none)
@@ -88,31 +106,13 @@ update action model =
          , Effects.map ArtistDetailAction effects )
 
     RouterAction routeAction ->
-      TransitRouter.update routerConfig routeAction model)
+      TransitRouter.update routerConfig routeAction model
 
 
 
 
 
-mountRoute : Route -> Route -> Model -> (Model, Effects Action)
-mountRoute prevRoute route model =
-  Debug.log ("Mount route: " ++ (toString route))
-  (case route of
-
-    Home ->
-      (model, Effects.none)
-
-    ArtistListingPage ->
-      (model, Effects.map ArtistListingAction (ServerApi.getArtists ArtistListing.HandleArtistsRetrieved))
-
-    ArtistDetailPage artistId ->
-      (model, Effects.map ArtistDetailAction (ServerApi.getArtist artistId ArtistDetail.ShowArtist))
-
-    EmptyRoute ->
-      (model, Effects.none))
-
-
-
+-- Main view/layout functions
 
 menu : Signal.Address Action -> Model -> Html
 menu address model =
@@ -120,11 +120,11 @@ menu address model =
     div [class "container"] [
         div [class "navbar-header"] [
           div [ class "navbar-brand" ] [
-            a (clickTo <| Routes.encode Home) [ text "Albums galore" ]
+            a (linkAttrs Home) [ text "Albums galore" ]
           ]
         ]
       , ul [class "nav navbar-nav"] [
-          li [] [a (clickTo <| Routes.encode ArtistListingPage) [ text "Artists" ]]
+          li [] [a (linkAttrs ArtistListingPage) [ text "Artists" ]]
       ]
     ]
   ]
@@ -144,6 +144,9 @@ contentView address model =
     ArtistDetailPage i ->
       ArtistDetail.view (Signal.forwardTo address ArtistDetailAction) model.artistDetailModel
 
+    NewArtistPage  ->
+      ArtistDetail.view (Signal.forwardTo address ArtistDetailAction) model.artistDetailModel
+
     EmptyRoute ->
       text "Empty WHAT ?"
 
@@ -159,6 +162,7 @@ view address model =
 
 
 
+-- wiring up start app
 
 app : StartApp.App Model
 app =
@@ -166,7 +170,7 @@ app =
     { init = init initialPath
     , update = update
     , view = view
-    , inputs = []
+    , inputs = [actions]
     }
 
 
