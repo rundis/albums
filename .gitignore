@@ -1,5 +1,6 @@
 frontend/elm-stuff
 frontend/*.js
+backend/.stack-work
 backend/.cabal-sandbox
 backend/cabal.sandbox.config
 backend/dist

@@ -16,7 +16,8 @@ The backend is written in Haskell and uses https://haskell-servant.github.io/[se
 a REST-api.
 
 .You will need to install:
-. Haskell (and Cabal). You might want to install https://www.haskell.org/platform/[Haskell platform]
+. Haskell - You might want to install https://www.haskell.org/platform/[Haskell platform]
+. https://github.com/commercialhaskell/stack/blob/master/doc/install_and_upgrade.md[Stack]
 
 === Frontend
 The frontend is written in http://elm-lang.org/[Elm]
@@ -34,10 +35,16 @@ a particular episode of the accompanying blog series, checkout the appropriate t
 
 === Backend
 . Open a terminal and cd to `$albums/backend`
-. `cabal sandbox init && cabal update && cabal init`
-. `cabal install --only-dependencies && cabal configure`
-. `cabal build`
-. `cabal run`
+. (Optional/Depending on your ghc version in path) - `stack setup`
+. `stack build`
+. `stack exec albums`
+
+If you would like to hack with reload support:
+- `stack install halive` alternatively clone https://github.com/lukexi/halive[halive] and build with stack manually (you might need to fiddle to ensure the ghc version used matches/is compatible with the backend app)
+- `stack exec halive src/Main.hs src`
+- Edit/save and enjoy recompile and auto restart
+
+
 
 You may test that it's up and running by `curl http://localhost:8081/artists/1`
 
