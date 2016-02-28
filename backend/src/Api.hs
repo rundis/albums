@@ -13,6 +13,11 @@ import Database.SQLite.Simple as Sql
 
 instance ToJSON M.Artist
 instance FromJSON M.Artist
+instance ToJSON M.Track
+instance FromJSON M.Track
+instance ToJSON M.Album
+instance FromJSON M.Album
+
 
 
 type ArtistAPI =
@@ -36,6 +41,29 @@ artistsServer conn =
     deleteArtist artistId        = liftIO $ S.deleteArtist conn artistId
 
 
+type AlbumAPI =
+       QueryParam "artistId" Int :> Get '[JSON] [M.Album]
+  :<|> ReqBody '[JSON] M.Album :> Post '[JSON] M.Album
+  :<|> Capture "albumId" Int :> ReqBody '[JSON] M.Album :> Put '[JSON] M.Album
+  :<|> Capture "albumId" Int :> Get '[JSON] M.Album
+  :<|> Capture "albumId" Int :> Delete '[] ()
+
+
+albumsServer :: Sql.Connection -> Server AlbumAPI
+albumsServer conn =
+  getAlbums :<|> postAlbum :<|> updateAlbum :<|> getAlbum :<|> deleteAlbum
+
+  where
+    getAlbums artistId            = liftIO $ case artistId of
+                                              Nothing -> S.findAlbums conn
+                                              Just x -> S.findAlbumsByArtist conn x
+    postAlbum album               = liftIO $ Sql.withTransaction conn $ S.newAlbum conn album
+    updateAlbum albumId album     = liftIOMaybeToEither err404 $ Sql.withTransaction conn $ S.updateAlbum conn album albumId
+    getAlbum albumId              = liftIOMaybeToEither err404 $ S.albumById conn albumId
+    deleteAlbum albumId           = liftIO $ Sql.withTransaction conn $ S.deleteAlbum conn albumId
+
+
+
 liftIOMaybeToEither ::  (MonadIO m) => a -> IO (Maybe b) -> EitherT a m b
 liftIOMaybeToEither err x = do
     m <- liftIO x
@@ -45,7 +73,11 @@ liftIOMaybeToEither err x = do
 
 
 
-type API = "artists" :> ArtistAPI
+type API = "artists" :> ArtistAPI :<|> "albums" :> AlbumAPI
+
+combinedServer :: Sql.Connection -> Server API
+combinedServer conn = artistsServer conn :<|> albumsServer conn
+
 
 
 api :: Proxy API

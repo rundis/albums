@@ -2,8 +2,8 @@
 module Main where
 
 
-import qualified Storage as S
 import qualified Api as A
+import qualified Bootstrap as B
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant
@@ -13,7 +13,7 @@ import Database.SQLite.Simple as Sql
 
 
 app :: Sql.Connection -> Application
-app conn = serve A.api (A.artistsServer conn)
+app conn = serve A.api (A.combinedServer conn)
 
 
 testConnect :: IO Sql.Connection
@@ -49,5 +49,5 @@ albumResourcePolicy =
 main :: IO ()
 main = do
   withTestConnection $ \conn ->  do
-    S.bootstrapDB conn
+    B.bootstrapDB conn
     run 8081 $ albumCors $ app conn

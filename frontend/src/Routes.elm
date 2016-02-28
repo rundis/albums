@@ -15,7 +15,11 @@ type Route
   | ArtistListingPage
   | ArtistDetailPage Int
   | NewArtistPage
+  | AlbumDetailPage Int
+  | NewAlbumPage
+  | NewArtistAlbumPage Int
   | EmptyRoute
+
 
 
 routeParsers : List (Matcher Route)
@@ -24,7 +28,11 @@ routeParsers =
   , static ArtistListingPage "/artists"
   , static NewArtistPage "/artists/new"
   , dyn1 ArtistDetailPage "/artists/" int ""
+  , dyn1 AlbumDetailPage "/albums/" int ""
+  , static NewAlbumPage "/albums/new"
+  , dyn1 NewArtistAlbumPage "/artists/" int "/albums/new"
   ]
+
 
 
 decode : String -> Route
@@ -37,9 +45,12 @@ encode : Route -> String
 encode route =
   case route of
     Home -> "/"
-    ArtistListingPage   -> "/artists"
-    NewArtistPage       -> "/artists/new"
-    ArtistDetailPage  i -> "/artists/" ++ toString i
+    ArtistListingPage     -> "/artists"
+    NewArtistPage         -> "/artists/new"
+    ArtistDetailPage  i   -> "/artists/" ++ toString i
+    AlbumDetailPage   i   -> "/albums/" ++ toString i
+    NewAlbumPage          -> "/albums/new"
+    NewArtistAlbumPage i  -> "/artists/" ++ (toString i) ++ "/albums/new"
     EmptyRoute -> ""
 
 
