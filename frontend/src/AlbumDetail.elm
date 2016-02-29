@@ -26,7 +26,7 @@ type alias TrackRowId =
 
 type Action
   = NoOp
-  | GetAlbum Int
+  | GetAlbum (Int)
   | ShowAlbum (Maybe Album)
   | HandleArtistsRetrieved (Maybe (List Artist))
   | SetAlbumName (String)
@@ -66,8 +66,7 @@ update action model =
         Just album ->
           ( createAlbumModel model album, Effects.none )
 
-        -- TODO: This could be an error if returned from api !
-        Nothing ->
+        Nothing -> -- TODO: This could be an error if returned from api !
           ( maybeAddPristine model, getArtists HandleArtistsRetrieved )
 
     HandleArtistsRetrieved xs ->
@@ -81,29 +80,21 @@ update action model =
       )
 
     SaveAlbum ->
-      case model.id of
-        Nothing ->
-          case model.artistId of
-            Nothing ->
-              Debug.crash "Create new album not implemented yet"
-            Just artistId ->
-              ( model
-              , createAlbum { name = model.name
-                            , artistId = artistId
-                            , tracks = (createTracks model.tracks)
-                            } HandleSaved
-              )
+      case (model.id, model.artistId) of
+        (Just albumId, Just artistId) ->
+          ( model
+          , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) HandleSaved
+          )
+        (Nothing, Just artistId) ->
+          ( model
+          , createAlbum { name = model.name
+                          , artistId = artistId
+                          , tracks = (createTracks model.tracks)
+                          } HandleSaved
+          )
+        (_, _) ->
+          Debug.crash "Missing artist.id, needs to be handled by validation"
 
-        Just albumId ->
-          case model.artistId of
-            Nothing ->
-              Debug.crash "Missing artist id, needs to be handled by validation"
-
-
-            Just artistId ->
-              ( model
-              , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) HandleSaved
-              )
 
     HandleSaved maybeAlbum ->
       case maybeAlbum of

@@ -82,10 +82,10 @@ mountRoute prevRoute route model =
         ( { model | albumDetailModel = model' }
         , Effects.map AlbumDetailAction effects)
 
-    NewArtistAlbumPage i ->
+    NewArtistAlbumPage artistId ->
       let
         (model', effects) =
-          AlbumDetail.update (AlbumDetail.ShowAlbum Nothing) (AlbumDetail.initForArtist i)
+          AlbumDetail.update (AlbumDetail.ShowAlbum Nothing) (AlbumDetail.initForArtist artistId)
       in
         ( { model | albumDetailModel = model' }
         , Effects.map AlbumDetailAction effects)

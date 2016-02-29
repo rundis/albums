@@ -55,14 +55,6 @@ deleteArtist conn artistId = do
   Sql.execute conn "delete from artist where id = ?" (Sql.Only artistId)
 
 
-albumsQuery :: String -> SqlTypes.Query
-albumsQuery whereClause =
-  SqlTypes.Query $ Txt.pack $
-    "select a.id, a.name, a.artist_id, t.id, t.name, t.duration \
-    \ from album a inner join album_track at on a.id = at.album_id \
-    \ inner join track t on at.track_id = t.id"
-    ++ whereClause
-    ++ " order by a.id, at.track_no"
 
 
 findAlbums :: Sql.Connection -> IO [M.Album]
@@ -77,10 +69,14 @@ findAlbumsByArtist conn artistId = do
   return $ Map.elems $ foldl groupAlbum Map.empty rows
 
 
-
-addTrack :: M.Album -> (Int, String, Int) -> M.Album
-addTrack album (trackId, trackName, trackDuration) =
-  album {M.albumTracks = (M.albumTracks album) ++ [M.Track (Just trackId) trackName trackDuration]}
+albumsQuery :: String -> SqlTypes.Query
+albumsQuery whereClause =
+  SqlTypes.Query $ Txt.pack $
+    "select a.id, a.name, a.artist_id, t.id, t.name, t.duration \
+    \ from album a inner join album_track at on a.id = at.album_id \
+    \ inner join track t on at.track_id = t.id"
+    ++ whereClause
+    ++ " order by a.id, at.track_no"
 
 
 groupAlbum :: Map.Map Int M.Album -> (Int, String, Int, Int, String, Int) -> Map.Map Int M.Album
@@ -88,7 +84,9 @@ groupAlbum acc (albumId, albumName, artistId, trackId, trackName, trackDuration)
   case (Map.lookup albumId acc) of
     Nothing -> Map.insert albumId (M.Album (Just albumId) albumName artistId [M.Track (Just trackId) trackName trackDuration]) acc
     Just _ -> Map.update (\a -> Just (addTrack a (trackId, trackName, trackDuration))) albumId acc
-
+              where
+                addTrack album (trackId, trackName, trackDuration) =
+                  album {M.albumTracks = (M.albumTracks album) ++ [M.Track (Just trackId) trackName trackDuration]}
 
 
 albumById :: Sql.Connection -> Int -> IO (Maybe M.Album)
