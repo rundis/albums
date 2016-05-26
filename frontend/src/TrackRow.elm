@@ -1,8 +1,8 @@
-module TrackRow exposing (Model, init, Action, update, view, Context, Status, initPristine, isPristine)
+module TrackRow exposing (Model, init, Msg, DispatchMsg, update, view, Status, initPristine, isPristine)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick, targetValue)
+import Html.Events exposing (on, onClick, onInput)
 import String
 
 
@@ -28,14 +28,6 @@ initPristine =
     Model "" Nothing Nothing Pristine
 
 
-type alias Context =
-    { actions : Signal.Address Action
-    , remove : Signal.Address ()
-    , moveUp : Signal.Address ()
-    , moveDown : Signal.Address ()
-    }
-
-
 type Status
     = Saved
     | Modified
@@ -43,10 +35,17 @@ type Status
     | Pristine
 
 
-type Action
+type Msg
     = SetTrackName String
     | SetMinutes String
     | SetSeconds String
+    | Dispatch DispatchMsg
+
+
+type DispatchMsg
+    = MoveUp
+    | MoveDown
+    | Remove
 
 
 isPristine : Model -> Bool
@@ -54,11 +53,11 @@ isPristine model =
     model.status == Pristine
 
 
-update : Action -> Model -> Model
+update : Msg -> Model -> ( Model, Maybe DispatchMsg )
 update action model =
     case action of
         SetTrackName v ->
-            { model | name = v, status = Modified }
+            ( { model | name = v, status = Modified }, Nothing )
 
         SetMinutes str ->
             let
@@ -67,13 +66,13 @@ update action model =
             in
                 case maybeMinutes of
                     Just m ->
-                        { model | durationMin = maybeMinutes, status = Modified }
+                        ( { model | durationMin = maybeMinutes, status = Modified }, Nothing )
 
                     Nothing ->
                         if String.isEmpty str then
-                            { model | durationMin = Nothing, status = Modified }
+                            ( { model | durationMin = Nothing, status = Modified }, Nothing )
                         else
-                            model
+                            ( model, Nothing )
 
         SetSeconds str ->
             let
@@ -83,29 +82,32 @@ update action model =
                 case maybeSeconds of
                     Just m ->
                         if m < 60 then
-                            { model | durationSec = maybeSeconds, status = Modified }
+                            ( { model | durationSec = maybeSeconds, status = Modified }, Nothing )
                         else
-                            model
+                            ( model, Nothing )
 
                     Nothing ->
                         if String.isEmpty str then
-                            { model | durationSec = Nothing, status = Modified }
+                            ( { model | durationSec = Nothing, status = Modified }, Nothing )
                         else
-                            model
+                            ( model, Nothing )
+
+        Dispatch dispatchMsg ->
+            ( model, Just dispatchMsg )
 
 
-view : Context -> Model -> Html
-view context model =
+view : Model -> Html Msg
+view model =
     tr []
         [ td [] [ statusView model ]
-        , td [] [ moveView context model ]
-        , td [] [ nameView context model ]
-        , td [] [ durationView context model ]
-        , td [] [ removeView context model ]
+        , td [] [ moveView model ]
+        , td [] [ nameView model ]
+        , td [] [ durationView model ]
+        , td [] [ removeView model ]
         ]
 
 
-statusView : Model -> Html
+statusView : Model -> Html Msg
 statusView model =
     let
         clazz =
@@ -125,16 +127,16 @@ statusView model =
         span [ class ("glyphicon " ++ clazz) ] []
 
 
-moveView : Context -> Model -> Html
-moveView context model =
+moveView : Model -> Html Msg
+moveView model =
     div [ class "btn-grp" ]
-        [ moveUpView context model, moveDownView context model ]
+        [ moveUpView model, moveDownView model ]
 
 
-moveUpView : Context -> Model -> Html
-moveUpView context model =
+moveUpView : Model -> Html Msg
+moveUpView model =
     button
-        [ onClick context.moveUp ()
+        [ onClick (Dispatch MoveUp)
         , class
             <| "btn btn-sm btn-default "
             ++ if isPristine model then
@@ -145,10 +147,10 @@ moveUpView context model =
         [ span [ class "glyphicon glyphicon-arrow-up" ] [] ]
 
 
-moveDownView : Context -> Model -> Html
-moveDownView context model =
+moveDownView : Model -> Html Msg
+moveDownView model =
     button
-        [ onClick context.moveDown ()
+        [ onClick (Dispatch MoveDown)
         , class
             <| "btn btn-sm btn-default "
             ++ if isPristine model then
@@ -159,25 +161,25 @@ moveDownView context model =
         [ span [ class "glyphicon glyphicon-arrow-down" ] [] ]
 
 
-nameView : Context -> Model -> Html
-nameView context model =
+nameView : Model -> Html Msg
+nameView model =
     input
         [ class "form-control"
         , value model.name
-        , on "input" targetValue (\str -> Signal.message context.actions (SetTrackName str))
+        , onInput SetTrackName
         ]
         []
 
 
-durationView : Context -> Model -> Html
-durationView context model =
+durationView : Model -> Html Msg
+durationView model =
     span []
         [ input
             [ class "form-control"
             , durStyle
             , maxlength 2
             , value <| durvalToString model.durationMin
-            , on "input" targetValue (\str -> Signal.message context.actions (SetMinutes str))
+            , onInput SetMinutes
             ]
             []
         , span [ style [ ( "font-weight", "bold" ), ( "margin", "0 5px 0 5px" ) ] ] [ text ":" ]
@@ -186,13 +188,13 @@ durationView context model =
             , durStyle
             , maxlength 2
             , value <| durvalToString model.durationSec
-            , on "input" targetValue (\str -> Signal.message context.actions (SetSeconds str))
+            , onInput SetSeconds
             ]
             []
         ]
 
 
-durStyle : Attribute
+durStyle : Attribute Msg
 durStyle =
     style
         [ ( "width", "45px" )
@@ -200,10 +202,10 @@ durStyle =
         ]
 
 
-removeView : Context -> Model -> Html
-removeView context model =
+removeView : Model -> Html Msg
+removeView model =
     button
-        [ onClick context.remove ()
+        [ onClick (Dispatch Remove)
         , class
             <| "btn btn-sm btn-danger "
             ++ if isPristine model then

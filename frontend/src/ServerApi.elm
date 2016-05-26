@@ -2,7 +2,6 @@ module ServerApi exposing (..)
 
 import Json.Decode as JsonD exposing ((:=))
 import Json.Encode as JsonE
-import Effects exposing (Effects)
 import Http
 import Task
 
