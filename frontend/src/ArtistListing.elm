@@ -1,4 +1,4 @@
-module ArtistListing (Model, Action(..), init, view, update) where
+module ArtistListing exposing (Model, Action(..), init, view, update)
 
 import ServerApi exposing (..)
 import Routes
@@ -10,39 +10,39 @@ import Effects exposing (Effects, Never)
 
 
 type alias Model =
-  { artists : List Artist
-  , errors : List String
-  }
+    { artists : List Artist
+    , errors : List String
+    }
 
 
 type Action
-  = Show
-  | HandleArtistsRetrieved (Maybe (List Artist))
-  | DeleteArtist (Int)
-  | HandleArtistDeleted (Maybe Http.Response)
+    = Show
+    | HandleArtistsRetrieved (Maybe (List Artist))
+    | DeleteArtist (Int)
+    | HandleArtistDeleted (Maybe Http.Response)
 
 
 init : Model
 init =
-  Model [] []
+    Model [] []
 
 
 update : Action -> Model -> ( Model, Effects Action )
 update action model =
-  case action of
-    Show ->
-      ( model, getArtists HandleArtistsRetrieved )
+    case action of
+        Show ->
+            ( model, getArtists HandleArtistsRetrieved )
 
-    HandleArtistsRetrieved xs ->
-      ( { model | artists = (Maybe.withDefault [] xs) }
-      , Effects.none
-      )
+        HandleArtistsRetrieved xs ->
+            ( { model | artists = (Maybe.withDefault [] xs) }
+            , Effects.none
+            )
 
-    DeleteArtist id ->
-      ( model, deleteArtist id HandleArtistDeleted )
+        DeleteArtist id ->
+            ( model, deleteArtist id HandleArtistDeleted )
 
-    HandleArtistDeleted res ->
-      ( model, getArtists HandleArtistsRetrieved )
+        HandleArtistDeleted res ->
+            ( model, getArtists HandleArtistsRetrieved )
 
 
 
@@ -51,49 +51,42 @@ update action model =
 
 artistRow : Signal.Address Action -> Artist -> Html
 artistRow address artist =
-  tr
-    []
-    [ td [] [ text artist.name ]
-    , td
-        []
-        [ button
-            [ class "btn btn-sm btn-default"
-            , Routes.clickAttr <| Routes.ArtistDetailPage artist.id
+    tr []
+        [ td [] [ text artist.name ]
+        , td []
+            [ button
+                [ class "btn btn-sm btn-default"
+                , Routes.clickAttr <| Routes.ArtistDetailPage artist.id
+                ]
+                [ text "Edit" ]
             ]
-            [ text "Edit" ]
-        ]
-    , td
-        []
-        [ button
-            [ class "btn btn-sm btn-danger"
-            , onClick address (DeleteArtist (.id artist))
+        , td []
+            [ button
+                [ class "btn btn-sm btn-danger"
+                , onClick address (DeleteArtist (.id artist))
+                ]
+                [ text "Delete!" ]
             ]
-            [ text "Delete!" ]
         ]
-    ]
 
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-  div
-    []
-    [ h1 [] [ text "Artists" ]
-    , button
-        [ class "pull-right btn btn-default"
-        , Routes.clickAttr Routes.NewArtistPage
-        ]
-        [ text "New Artist" ]
-    , table
-        [ class "table table-striped" ]
-        [ thead
-            []
-            [ tr
-                []
-                [ th [] [ text "Name" ]
-                , th [] []
-                , th [] []
-                ]
+    div []
+        [ h1 [] [ text "Artists" ]
+        , button
+            [ class "pull-right btn btn-default"
+            , Routes.clickAttr Routes.NewArtistPage
             ]
-        , tbody [] (List.map (artistRow address) model.artists)
+            [ text "New Artist" ]
+        , table [ class "table table-striped" ]
+            [ thead []
+                [ tr []
+                    [ th [] [ text "Name" ]
+                    , th [] []
+                    , th [] []
+                    ]
+                ]
+            , tbody [] (List.map (artistRow address) model.artists)
+            ]
         ]
-    ]
