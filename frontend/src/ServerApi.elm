@@ -43,24 +43,20 @@ baseUrl =
     "http://localhost:8081"
 
 
-getArtist : Int -> (Maybe Artist -> a) -> Effects.Effects a
-getArtist id action =
+getArtist : Int -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
+getArtist id errorMsg msg =
     Http.get artistDecoder (baseUrl ++ "/artists/" ++ toString id)
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-getArtists : (Maybe (List Artist) -> a) -> Effects a
-getArtists action =
+getArtists : (Http.Error -> msg) -> (List Artist -> msg) -> Cmd msg
+getArtists errorMsg msg =
     Http.get artistsDecoder (baseUrl ++ "/artists")
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-createArtist : ArtistRequest a -> (Maybe Artist -> b) -> Effects.Effects b
-createArtist artist action =
+createArtist : ArtistRequest a -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
+createArtist artist errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "POST"
         , url = baseUrl ++ "/artists"
@@ -68,13 +64,11 @@ createArtist artist action =
         , headers = [ ( "Content-Type", "application/json" ) ]
         }
         |> Http.fromJson artistDecoder
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-updateArtist : Artist -> (Maybe Artist -> a) -> Effects.Effects a
-updateArtist artist action =
+updateArtist : Artist -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
+updateArtist artist errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "PUT"
         , url = baseUrl ++ "/artists/" ++ toString artist.id
@@ -82,22 +76,18 @@ updateArtist artist action =
         , headers = [ ( "Content-Type", "application/json" ) ]
         }
         |> Http.fromJson artistDecoder
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-deleteArtist : Int -> (Maybe Http.Response -> a) -> Effects.Effects a
-deleteArtist id action =
+deleteArtist : Int -> msg -> msg -> Cmd msg
+deleteArtist id errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "DELETE"
         , url = baseUrl ++ "/artists/" ++ toString id
         , body = Http.empty
         , headers = []
         }
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform (\_ -> errorMsg) (\_ -> msg)
 
 
 artistsDecoder : JsonD.Decoder (List Artist)
@@ -120,24 +110,20 @@ encodeArtist a =
             ]
 
 
-getAlbum : Int -> (Maybe Album -> a) -> Effects.Effects a
-getAlbum id action =
+getAlbum : Int -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
+getAlbum id errorMsg msg =
     Http.get albumDecoder (baseUrl ++ "/albums/" ++ toString id)
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-getAlbumsByArtist : Int -> (Maybe (List Album) -> a) -> Effects a
-getAlbumsByArtist artistId action =
+getAlbumsByArtist : Int -> (Http.Error -> msg) -> (List Album -> msg) -> Cmd msg
+getAlbumsByArtist artistId errorMsg msg =
     Http.get albumsDecoder (baseUrl ++ "/albums?artistId=" ++ toString artistId)
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-updateAlbum : Album -> (Maybe Album -> a) -> Effects.Effects a
-updateAlbum album action =
+updateAlbum : Album -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
+updateAlbum album errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "PUT"
         , url = baseUrl ++ "/albums/" ++ toString album.id
@@ -145,13 +131,11 @@ updateAlbum album action =
         , headers = [ ( "Content-Type", "application/json" ) ]
         }
         |> Http.fromJson albumDecoder
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-createAlbum : AlbumRequest a -> (Maybe Album -> b) -> Effects.Effects b
-createAlbum album action =
+createAlbum : AlbumRequest a -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
+createAlbum album errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "POST"
         , url = baseUrl ++ "/albums"
@@ -159,22 +143,18 @@ createAlbum album action =
         , headers = [ ( "Content-Type", "application/json" ) ]
         }
         |> Http.fromJson albumDecoder
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform errorMsg msg
 
 
-deleteAlbum : Int -> (Maybe Http.Response -> a) -> Effects.Effects a
-deleteAlbum id action =
+deleteAlbum : Int -> msg -> msg -> Cmd msg
+deleteAlbum id errorMsg msg =
     Http.send Http.defaultSettings
         { verb = "DELETE"
         , url = baseUrl ++ "/albums/" ++ toString id
         , body = Http.empty
         , headers = []
         }
-        |> Task.toMaybe
-        |> Task.map action
-        |> Effects.task
+        |> Task.perform (\_ -> errorMsg) (\_ -> msg)
 
 
 albumsDecoder : JsonD.Decoder (List Album)
