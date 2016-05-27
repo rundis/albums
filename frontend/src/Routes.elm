@@ -1,13 +1,11 @@
 module Routes exposing (..)
 
-import Effects exposing (Effects)
-import RouteParser exposing (..)
-import TransitRouter
 import Html exposing (Attribute)
 import Html.Attributes exposing (href)
 import Json.Decode as Json
 import Html.Events exposing (on, onClick, onWithOptions)
-import Signal
+import UrlParser exposing (Parser, parse, (</>), format, int, oneOf, s, string)
+import Navigation exposing (Location)
 
 
 type Route
@@ -21,22 +19,26 @@ type Route
     | EmptyRoute
 
 
-routeParsers : List (Matcher Route)
-routeParsers =
-    [ static Home "/"
-    , static ArtistListingPage "/artists"
-    , static NewArtistPage "/artists/new"
-    , dyn1 ArtistDetailPage "/artists/" int ""
-    , dyn1 AlbumDetailPage "/albums/" int ""
-    , static NewAlbumPage "/albums/new"
-    , dyn1 NewArtistAlbumPage "/artists/" int "/albums/new"
-    ]
+
+--routeParser : List (Matcher Route)
 
 
-decode : String -> Route
-decode path =
-    RouteParser.match routeParsers path
-        |> Maybe.withDefault EmptyRoute
+routeParser : Parser (Route -> a) a
+routeParser =
+    oneOf
+        [ format Home (s "/")
+        , format ArtistListingPage (s "/artists")
+        , format NewArtistPage (s "/artists/new")
+        , format ArtistDetailPage (s "/artists" </> int)
+        , format AlbumDetailPage (s "/albums" </> int)
+        , format NewAlbumPage (s "/albums/new")
+        , format NewArtistAlbumPage (s "/artists" </> int </> s "albums/new")
+        ]
+
+
+decode : Location -> Result String Route
+decode location =
+    parse identity routeParser location.pathname
 
 
 encode : Route -> String
@@ -67,27 +69,34 @@ encode route =
             ""
 
 
-redirect : Route -> Effects ()
+redirect : Route -> Cmd msg
 redirect route =
-    encode route
-        |> Signal.send TransitRouter.pushPathAddress
-        |> Effects.task
+    Navigation.newUrl (encode route)
 
 
-clickAttr : Route -> Attribute
-clickAttr route =
-    on "click" Json.value (\_ -> Signal.message TransitRouter.pushPathAddress <| encode route)
+
+{- redirect : Route -> Effects ()
+   redirect route =
+       encode route
+           |> Signal.send TransitRouter.pushPathAddress
+           |> Effects.task
 
 
-linkAttrs : Route -> List Attribute
-linkAttrs route =
-    let
-        path =
-            encode route
-    in
-        [ href path
-        , onWithOptions "click"
-            { stopPropagation = True, preventDefault = True }
-            Json.value
-            (\_ -> Signal.message TransitRouter.pushPathAddress path)
-        ]
+   clickAttr : Route -> Attribute
+   clickAttr route =
+       on "click" Json.value (\_ -> Signal.message TransitRouter.pushPathAddress <| encode route)
+
+
+   linkAttrs : Route -> List Attribute
+   linkAttrs route =
+       let
+           path =
+               encode route
+       in
+           [ href path
+           , onWithOptions "click"
+               { stopPropagation = True, preventDefault = True }
+               Json.value
+               (\_ -> Signal.message TransitRouter.pushPathAddress path)
+           ]
+-}
