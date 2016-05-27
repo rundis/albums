@@ -1,4 +1,4 @@
-module TrackRow exposing (Model, init, Msg, DispatchMsg, update, view, Status, initPristine, isPristine)
+module TrackRow exposing (Model, init, Msg, DispatchMsg(..), update, view, Status, initPristine, isPristine)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)

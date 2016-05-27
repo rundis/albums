@@ -1,13 +1,14 @@
-module AlbumDetail exposing (Model, Action(..), init, initForArtist, view, update)
+module AlbumDetail exposing (Model, Msg, init, initForArtist, view, update)
 
 import TrackRow
 import ServerApi exposing (Album, Track, AlbumRequest, Artist, getAlbum, updateAlbum, createAlbum, getArtists)
 import Routes
-import Effects exposing (Effects)
 import Html exposing (..)
+import Html.App
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, on, targetValue)
+import Html.Events exposing (onClick, onInput, targetValue)
 import List.Extra as ListX
+import Http
 
 
 type alias Model =
@@ -24,18 +25,22 @@ type alias TrackRowId =
     Int
 
 
-type Action
+type Msg
     = NoOp
     | GetAlbum (Int)
-    | ShowAlbum (Maybe Album)
-    | HandleArtistsRetrieved (Maybe (List Artist))
+    | ShowAlbum Album
+    | NewAlbum
+    | HandleArtistsRetrieved (List Artist)
+    | FetchArtistsFailed Http.Error
     | SetAlbumName (String)
     | SaveAlbum
-    | HandleSaved (Maybe Album)
-    | ModifyTrack TrackRowId TrackRow.Action
+    | HandleSaved Album
+    | SaveFailed Http.Error
+    | ModifyTrack TrackRowId TrackRow.Msg
     | RemoveTrack TrackRowId
     | MoveTrackUp TrackRowId
     | MoveTrackDown TrackRowId
+    | FetchAlbumFailed Http.Error
 
 
 init : Model
@@ -48,44 +53,48 @@ initForArtist artistId =
     Model Nothing (Just artistId) "" [] 0 []
 
 
-update : Action -> Model -> ( Model, Effects Action )
-update action model =
-    case action of
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
         NoOp ->
-            ( model, Effects.none )
+            ( model, Cmd.none )
 
         GetAlbum id ->
             ( model
-            , Effects.batch
-                [ getAlbum id ShowAlbum
-                , getArtists HandleArtistsRetrieved
+            , Cmd.batch
+                [ getAlbum id FetchAlbumFailed ShowAlbum
+                , getArtists FetchArtistsFailed HandleArtistsRetrieved
                 ]
             )
 
-        ShowAlbum maybeAlbum ->
-            case maybeAlbum of
-                Just album ->
-                    ( createAlbumModel model album, Effects.none )
+        FetchAlbumFailed err ->
+            ( model, Cmd.none )
 
-                Nothing ->
-                    -- TODO: This could be an error if returned from api !
-                    ( maybeAddPristine model, getArtists HandleArtistsRetrieved )
+        ShowAlbum album ->
+            ( createAlbumModel model album, Cmd.none )
 
-        HandleArtistsRetrieved xs ->
-            ( { model | artists = (Maybe.withDefault [] xs) }
-            , Effects.none
+        NewAlbum ->
+            ( maybeAddPristine model, getArtists FetchArtistsFailed HandleArtistsRetrieved )
+
+        HandleArtistsRetrieved artists' ->
+            ( { model | artists = artists' }
+            , Cmd.none
             )
+
+        -- TODO: show error
+        FetchArtistsFailed err ->
+            ( model, Cmd.none )
 
         SetAlbumName txt ->
             ( { model | name = txt }
-            , Effects.none
+            , Cmd.none
             )
 
         SaveAlbum ->
             case ( model.id, model.artistId ) of
                 ( Just albumId, Just artistId ) ->
                     ( model
-                    , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) HandleSaved
+                    , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) SaveFailed HandleSaved
                     )
 
                 ( Nothing, Just artistId ) ->
@@ -95,25 +104,24 @@ update action model =
                         , artistId = artistId
                         , tracks = (createTracks model.tracks)
                         }
+                        SaveFailed
                         HandleSaved
                     )
 
                 ( _, _ ) ->
                     Debug.crash "Missing artist.id, needs to be handled by validation"
 
-        HandleSaved maybeAlbum ->
-            case maybeAlbum of
-                Just album ->
-                    ( createAlbumModel model album
-                    , Effects.map (\_ -> NoOp) (Routes.redirect <| Routes.ArtistDetailPage album.artistId)
-                    )
+        HandleSaved album ->
+            ( createAlbumModel model album
+            , Routes.redirect (Routes.ArtistDetailPage album.artistId)
+            )
 
-                Nothing ->
-                    Debug.crash "Save failed... we're not handling it..."
+        SaveFailed err ->
+            ( model, Cmd.none )
 
         RemoveTrack id ->
             ( { model | tracks = List.filter (\( rowId, _ ) -> rowId /= id) model.tracks }
-            , Effects.none
+            , Cmd.none
             )
 
         MoveTrackUp id ->
@@ -123,11 +131,11 @@ update action model =
             in
                 case track of
                     Nothing ->
-                        ( model, Effects.none )
+                        ( model, Cmd.none )
 
                     Just t ->
                         ( { model | tracks = moveUp model.tracks t }
-                        , Effects.none
+                        , Cmd.none
                         )
 
         MoveTrackDown id ->
@@ -149,7 +157,7 @@ update action model =
             in
                 case track of
                     Nothing ->
-                        ( model, Effects.none )
+                        ( model, Cmd.none )
 
                     Just t ->
                         ( { model
@@ -159,20 +167,46 @@ update action model =
                                 else
                                     model.tracks
                           }
-                        , Effects.none
+                        , Cmd.none
                         )
 
-        ModifyTrack id trackRowAction ->
-            let
-                updateTrack ( trackId, trackModel ) =
-                    if trackId == id then
-                        ( trackId, TrackRow.update trackRowAction trackModel )
-                    else
-                        ( trackId, trackModel )
-            in
-                ( maybeAddPristine { model | tracks = List.map updateTrack model.tracks }
-                , Effects.none
-                )
+        ModifyTrack id trackRowMsg ->
+            case (updateTrackRow id trackRowMsg model) of
+                Just ( updTrack, Nothing ) ->
+                    ( maybeAddPristine
+                        { model
+                            | tracks =
+                                ListX.replaceIf (\( i, _ ) -> i == id)
+                                    ( id, updTrack )
+                                    model.tracks
+                        }
+                    , Cmd.none
+                    )
+
+                Just ( _, Just dispatchMsg ) ->
+                    handleDispatch id dispatchMsg model
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+
+updateTrackRow : TrackRowId -> TrackRow.Msg -> Model -> Maybe ( TrackRow.Model, Maybe TrackRow.DispatchMsg )
+updateTrackRow id msg model =
+    ListX.find (\( trackId, _ ) -> id == trackId) model.tracks
+        |> Maybe.map (\( _, trackModel ) -> TrackRow.update msg trackModel)
+
+
+handleDispatch : TrackRowId -> TrackRow.DispatchMsg -> Model -> ( Model, Cmd Msg )
+handleDispatch id msg model =
+    case msg of
+        TrackRow.MoveDown ->
+            update (MoveTrackDown id) model
+
+        TrackRow.MoveUp ->
+            update (MoveTrackUp id) model
+
+        TrackRow.Remove ->
+            update (RemoveTrack id) model
 
 
 createAlbumModel : Model -> Album -> Model
@@ -226,8 +260,8 @@ pageTitle model =
             "New album"
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
     div []
         [ h1 [] [ text <| pageTitle model ]
         , Html.form [ class "form-horizontal" ]
@@ -237,30 +271,30 @@ view address model =
                     [ input
                         [ class "form-control"
                         , value model.name
-                        , on "input" targetValue (\str -> Signal.message address (SetAlbumName str))
+                        , onInput SetAlbumName
                         ]
                         []
                     ]
                 ]
-            , (artistDropDown address model)
+            , (artistDropDown model)
             , div [ class "form-group" ]
                 [ div [ class "col-sm-offset-2 col-sm-10" ]
                     [ button
                         [ class "btn btn-default"
                         , type' "button"
-                        , onClick address SaveAlbum
+                        , onClick SaveAlbum
                         ]
                         [ text "Save" ]
                     ]
                 ]
             ]
         , h2 [] [ text "Tracks" ]
-        , trackListing address model
+        , trackListing model
         ]
 
 
-artistDropDown : Signal.Address Action -> Model -> Html
-artistDropDown address model =
+artistDropDown : Model -> Html Msg
+artistDropDown model =
     let
         val =
             Maybe.withDefault (-1) model.artistId
@@ -277,8 +311,8 @@ artistDropDown address model =
             ]
 
 
-trackListing : Signal.Address Action -> Model -> Html
-trackListing address model =
+trackListing : Model -> Html Msg
+trackListing model =
     table [ class "table table-striped" ]
         [ thead []
             [ tr []
@@ -289,20 +323,13 @@ trackListing address model =
                 , th [] []
                 ]
             ]
-        , tbody [] (List.map (trackRow address) model.tracks)
+        , tbody [] (List.map trackRow model.tracks)
         ]
 
 
-trackRow : Signal.Address Action -> ( TrackRowId, TrackRow.Model ) -> Html
-trackRow address ( id, rowModel ) =
-    let
-        context =
-            TrackRow.Context (Signal.forwardTo address (ModifyTrack id))
-                (Signal.forwardTo address (always (RemoveTrack id)))
-                (Signal.forwardTo address (always (MoveTrackUp id)))
-                (Signal.forwardTo address (always (MoveTrackDown id)))
-    in
-        TrackRow.view context rowModel
+trackRow : ( TrackRowId, TrackRow.Model ) -> Html Msg
+trackRow ( id, rowModel ) =
+    Html.App.map (ModifyTrack id) (TrackRow.view rowModel)
 
 
 
