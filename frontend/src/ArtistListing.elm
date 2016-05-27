@@ -3,8 +3,8 @@ module ArtistListing exposing (Model, Msg, init, view, update)
 import ServerApi exposing (..)
 import Routes
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, on, targetValue)
+import Html.Attributes exposing (class, href)
+import Html.Events exposing (onClick)
 import Http
 
 
