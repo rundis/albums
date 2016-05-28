@@ -1,0 +1,23 @@
+{
+  "name": "euro-2016-predictions",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack-dev-server --hot --inline --port 8090",
+    "build": "webpack"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "clean-webpack-plugin": "^0.1.8",
+    "copy-webpack-plugin": "^1.1.1",
+    "elm-webpack-loader": "^3.0.0",
+    "file-loader": "^0.8.5",
+    "style-loader": "^0.13.0",
+    "webpack": "^1.12.12",
+    "webpack-dev-server": "^1.14.1",
+    "elm-hot-loader": "^0.3.0"
+  }
+}

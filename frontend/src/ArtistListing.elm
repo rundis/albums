@@ -1,4 +1,4 @@
-module ArtistListing exposing (Model, Msg, init, view, update)
+module ArtistListing exposing (Model, Msg, init, view, update, mountCmd)
 
 import ServerApi exposing (..)
 import Routes
@@ -28,11 +28,16 @@ init =
     Model [] []
 
 
+mountCmd : Cmd Msg
+mountCmd =
+    ServerApi.getArtists FetchArtistsFailed HandleArtistsRetrieved
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
         Show ->
-            ( model, getArtists FetchArtistsFailed HandleArtistsRetrieved )
+            ( model, mountCmd )
 
         HandleArtistsRetrieved artists ->
             ( { model | artists = artists }
@@ -63,10 +68,8 @@ artistRow artist =
     tr []
         [ td [] [ text artist.name ]
         , td []
-            [ a
-                [ class "btn btn-sm btn-default"
-                , href <| Routes.encode <| Routes.ArtistDetailPage artist.id
-                ]
+            [ Routes.linkTo (Routes.ArtistDetailPage artist.id)
+                [ class "btn btn-sm btn-default" ]
                 [ text "Edit" ]
             ]
         , td []
@@ -83,10 +86,8 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Artists" ]
-        , a
-            [ class "pull-right btn btn-default"
-            , href <| Routes.encode Routes.NewArtistPage
-            ]
+        , Routes.linkTo Routes.NewArtistPage
+            [ class "pull-right btn btn-default" ]
             [ text "New Artist" ]
         , table [ class "table table-striped" ]
             [ thead []

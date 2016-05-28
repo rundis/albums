@@ -1,4 +1,4 @@
-module AlbumDetail exposing (Model, Msg, init, initForArtist, view, update)
+module AlbumDetail exposing (Model, Msg, init, initForArtist, view, update, mountAlbumCmd, mountNewAlbumCmd)
 
 import TrackRow
 import ServerApi exposing (Album, Track, AlbumRequest, Artist, getAlbum, updateAlbum, createAlbum, getArtists)
@@ -26,9 +26,7 @@ type alias TrackRowId =
 
 
 type Msg
-    = NoOp
-    | GetAlbum (Int)
-    | ShowAlbum Album
+    = ShowAlbum Album
     | NewAlbum
     | HandleArtistsRetrieved (List Artist)
     | FetchArtistsFailed Http.Error
@@ -50,23 +48,25 @@ init =
 
 initForArtist : Int -> Model
 initForArtist artistId =
-    Model Nothing (Just artistId) "" [] 0 []
+    Model Nothing (Just artistId) "" [] 0 [] |> maybeAddPristine
+
+
+mountAlbumCmd : Int -> Cmd Msg
+mountAlbumCmd id =
+    Cmd.batch
+        [ getAlbum id FetchAlbumFailed ShowAlbum
+        , getArtists FetchArtistsFailed HandleArtistsRetrieved
+        ]
+
+
+mountNewAlbumCmd : Cmd Msg
+mountNewAlbumCmd =
+    getArtists FetchArtistsFailed HandleArtistsRetrieved
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
-
-        GetAlbum id ->
-            ( model
-            , Cmd.batch
-                [ getAlbum id FetchAlbumFailed ShowAlbum
-                , getArtists FetchArtistsFailed HandleArtistsRetrieved
-                ]
-            )
-
         FetchAlbumFailed err ->
             ( model, Cmd.none )
 
@@ -284,7 +284,7 @@ view model =
                         , type' "button"
                         , onClick SaveAlbum
                         ]
-                        [ text "Save" ]
+                        [ text "Saves" ]
                     ]
                 ]
             ]

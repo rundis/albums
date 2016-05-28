@@ -1,11 +1,13 @@
 module Routes exposing (..)
 
-import Html exposing (Attribute)
-import Html.Attributes exposing (href)
-import Json.Decode as Json
-import Html.Events exposing (on, onClick, onWithOptions)
 import UrlParser exposing (Parser, parse, (</>), format, int, oneOf, s, string)
 import Navigation exposing (Location)
+import String
+import Html.Attributes exposing (href, attribute)
+import Html exposing (Html, Attribute, a)
+import Html.Events exposing (onWithOptions)
+import Json.Decode as Json
+import Json.Decode.Extra exposing (lazy)
 
 
 type Route
@@ -14,7 +16,6 @@ type Route
     | ArtistDetailPage Int
     | NewArtistPage
     | AlbumDetailPage Int
-    | NewAlbumPage
     | NewArtistAlbumPage Int
     | EmptyRoute
 
@@ -26,19 +27,22 @@ type Route
 routeParser : Parser (Route -> a) a
 routeParser =
     oneOf
-        [ format Home (s "/")
-        , format ArtistListingPage (s "/artists")
-        , format NewArtistPage (s "/artists/new")
-        , format ArtistDetailPage (s "/artists" </> int)
-        , format AlbumDetailPage (s "/albums" </> int)
-        , format NewAlbumPage (s "/albums/new")
-        , format NewArtistAlbumPage (s "/artists" </> int </> s "albums/new")
+        [ format Home (s "")
+        , format NewArtistPage (s "artists" </> s "new")
+        , format NewArtistAlbumPage (s "artists" </> int </> s "albums" </> s "new")
+        , format ArtistDetailPage (s "artists" </> int)
+        , format ArtistListingPage (s "artists")
+        , format AlbumDetailPage (s "albums" </> int)
         ]
+
+
+
+--parse identity routeParser "artists"
 
 
 decode : Location -> Result String Route
 decode location =
-    parse identity routeParser location.pathname
+    parse identity routeParser (String.dropLeft 1 location.pathname)
 
 
 encode : Route -> String
@@ -59,9 +63,6 @@ encode route =
         AlbumDetailPage i ->
             "/albums/" ++ toString i
 
-        NewAlbumPage ->
-            "/albums/new"
-
         NewArtistAlbumPage i ->
             "/artists/" ++ (toString i) ++ "/albums/new"
 
@@ -74,29 +75,36 @@ redirect route =
     Navigation.newUrl (encode route)
 
 
-
-{- redirect : Route -> Effects ()
-   redirect route =
-       encode route
-           |> Signal.send TransitRouter.pushPathAddress
-           |> Effects.task
+linkTo : Route -> List (Attribute msg) -> List (Html msg) -> Html msg
+linkTo route attrs content =
+    a ((linkAttrs route) ++ attrs) content
 
 
-   clickAttr : Route -> Attribute
-   clickAttr route =
-       on "click" Json.value (\_ -> Signal.message TransitRouter.pushPathAddress <| encode route)
+linkAttrs : Route -> List (Attribute msg)
+linkAttrs route =
+    let
+        path =
+            encode route
+    in
+        [ href path
+        , attribute "data-navigate" path
+        ]
 
 
-   linkAttrs : Route -> List Attribute
-   linkAttrs route =
-       let
-           path =
-               encode route
-       in
-           [ href path
-           , onWithOptions "click"
-               { stopPropagation = True, preventDefault = True }
-               Json.value
-               (\_ -> Signal.message TransitRouter.pushPathAddress path)
-           ]
--}
+catchNavigationClicks : (String -> msg) -> Attribute msg
+catchNavigationClicks tagger =
+    onWithOptions "click"
+        { stopPropagation = True
+        , preventDefault = True
+        }
+        (Json.map tagger (Json.at [ "target" ] pathDecoder))
+
+
+pathDecoder : Json.Decoder String
+pathDecoder =
+    Json.oneOf
+        [ Json.at [ "dataset", "navigate" ] Json.string
+        , Json.at [ "data-navigate" ] Json.string
+        , Json.at [ "parentElement" ] (lazy (\_ -> pathDecoder))
+        , Json.fail "no path found for click"
+        ]

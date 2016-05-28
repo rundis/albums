@@ -1,4 +1,4 @@
-module ArtistDetail exposing (Model, Msg(..), init, view, update)
+module ArtistDetail exposing (Model, Msg(..), mountShowCmd, init, view, update)
 
 import ServerApi exposing (Artist, ArtistRequest, Album, getArtist, updateArtist, createArtist, getAlbumsByArtist, deleteAlbum)
 import Routes
@@ -20,7 +20,6 @@ type Msg
     | GetArtist Int
     | FetchArtistFailed Http.Error
     | ShowArtist Artist
-    | NewArtist
     | SetArtistName String
     | SaveArtist
     | HandleSaved Artist
@@ -37,6 +36,11 @@ init =
     Model Nothing "" []
 
 
+mountShowCmd : Int -> Cmd Msg
+mountShowCmd id =
+    getArtist id FetchArtistFailed ShowArtist
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
@@ -44,7 +48,7 @@ update action model =
             ( model, Cmd.none )
 
         GetArtist id ->
-            ( model, getArtist id FetchArtistFailed ShowArtist )
+            ( model, mountShowCmd id )
 
         -- TODO: Show error
         FetchArtistFailed err ->
@@ -60,14 +64,6 @@ update action model =
                 , name = artist.name
               }
             , getAlbumsByArtist artist.id FetchAlbumsFailed HandleAlbumsRetrieved
-            )
-
-        NewArtist ->
-            ( { model
-                | id = Nothing
-                , name = ""
-              }
-            , Cmd.none
             )
 
         SaveArtist ->
@@ -165,10 +161,8 @@ newAlbumButton model =
             button [ class "pull-right btn btn-default disabled" ] [ text "New Album" ]
 
         Just x ->
-            a
-                [ class "pull-right btn btn-default"
-                , href <| Routes.encode <| Routes.NewArtistAlbumPage x
-                ]
+            Routes.linkTo (Routes.NewArtistAlbumPage x)
+                [ class "pull-right btn btn-default" ]
                 [ text "New Album" ]
 
 
@@ -195,10 +189,8 @@ albumRow album =
         , td [] [ text (toString (List.length album.tracks)) ]
         , td [] [ text (albumTime album) ]
         , td []
-            [ a
-                [ class "btn btn-sm btn-default"
-                , href <| Routes.encode <| Routes.AlbumDetailPage album.id
-                ]
+            [ Routes.linkTo (Routes.AlbumDetailPage album.id)
+                [ class "btn btn-sm btn-default" ]
                 [ text "Edit" ]
             ]
         , td []
