@@ -56,7 +56,7 @@ init result =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case (Debug.log "Msg " msg) of
+    case msg of
         HomeMsg m ->
             let
                 ( subMdl, subCmd ) =
@@ -90,36 +90,39 @@ update msg model =
                     ! [ Cmd.map AlbumDetailMsg subCmd ]
 
         Navigate url ->
-            ( model, Navigation.newUrl url )
+            model ! [ Navigation.newUrl url ]
 
 
 urlUpdate : Result String Route -> Model -> ( Model, Cmd Msg )
 urlUpdate result model =
-    case (Debug.log "Parse-results:" result) of
+    case result of
         Err _ ->
-            ( model, Navigation.modifyUrl (Routes.encode model.route) )
+            model ! [ Navigation.modifyUrl (Routes.encode model.route) ]
 
         Ok (ArtistListingPage as route) ->
-            ( { model | route = route }, Cmd.map ArtistListingMsg ArtistListing.mountCmd )
+            { model | route = route }
+                ! [ Cmd.map ArtistListingMsg ArtistListing.mountCmd ]
 
         Ok ((ArtistDetailPage artistId) as route) ->
-            ( { model | route = route }, Cmd.map ArtistDetailMsg (ArtistDetail.mountShowCmd artistId) )
+            { model | route = route }
+                ! [ Cmd.map ArtistDetailMsg <| ArtistDetail.mountShowCmd artistId ]
 
         Ok (NewArtistPage as route) ->
-            ( { model | route = route, artistDetailModel = ArtistDetail.init }, Cmd.none )
+            { model | route = route, artistDetailModel = ArtistDetail.init } ! []
 
         Ok ((AlbumDetailPage albumId) as route) ->
-            ( { model | route = route }
-            , Cmd.map AlbumDetailMsg (AlbumDetail.mountAlbumCmd albumId)
-            )
+            { model | route = route }
+                ! [ Cmd.map AlbumDetailMsg <| AlbumDetail.mountAlbumCmd albumId ]
 
         Ok ((NewArtistAlbumPage artistId) as route) ->
-            ( { model | route = route, albumDetailModel = AlbumDetail.initForArtist artistId }
-            , Cmd.map AlbumDetailMsg AlbumDetail.mountNewAlbumCmd
-            )
+            { model
+                | route = route
+                , albumDetailModel = AlbumDetail.initForArtist artistId
+            }
+                ! [ Cmd.map AlbumDetailMsg AlbumDetail.mountNewAlbumCmd ]
 
         Ok route ->
-            ( { model | route = route }, Cmd.none )
+            { model | route = route } ! []
 
 
 view : Model -> Html Msg
@@ -158,7 +161,7 @@ menu model =
 
 contentView : Model -> Html Msg
 contentView model =
-    case (Debug.log "Content route: " model.route) of
+    case model.route of
         Home ->
             App.map HomeMsg <| Home.view model.homeModel
 
@@ -176,12 +179,3 @@ contentView model =
 
         NewArtistAlbumPage i ->
             App.map AlbumDetailMsg <| AlbumDetail.view model.albumDetailModel
-
-        EmptyRoute ->
-            emptyRouteView model
-
-
-emptyRouteView : Model -> Html Msg
-emptyRouteView model =
-    div []
-        [ h3 [] [ text "SHIT Don't know this route" ] ]

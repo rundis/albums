@@ -27,7 +27,6 @@ type alias TrackRowId =
 
 type Msg
     = ShowAlbum Album
-    | NewAlbum
     | HandleArtistsRetrieved (List Artist)
     | FetchArtistsFailed Http.Error
     | SetAlbumName (String)
@@ -73,9 +72,6 @@ update msg model =
         ShowAlbum album ->
             ( createAlbumModel model album, Cmd.none )
 
-        NewAlbum ->
-            ( maybeAddPristine model, getArtists FetchArtistsFailed HandleArtistsRetrieved )
-
         HandleArtistsRetrieved artists' ->
             ( { model | artists = artists' }
             , Cmd.none
@@ -113,7 +109,7 @@ update msg model =
 
         HandleSaved album ->
             ( createAlbumModel model album
-            , Routes.redirect (Routes.ArtistDetailPage album.artistId)
+            , Routes.navigate (Routes.ArtistDetailPage album.artistId)
             )
 
         SaveFailed err ->
@@ -125,75 +121,60 @@ update msg model =
             )
 
         MoveTrackUp id ->
-            let
-                track =
-                    ListX.find (\( rowId, _ ) -> rowId == id) model.tracks
-            in
-                case track of
-                    Nothing ->
-                        ( model, Cmd.none )
-
-                    Just t ->
-                        ( { model | tracks = moveUp model.tracks t }
-                        , Cmd.none
-                        )
+            ListX.find (\( rowId, _ ) -> rowId == id) model.tracks
+                |> Maybe.map (\t -> { model | tracks = moveUp model.tracks t })
+                |> Maybe.withDefault model
+                |> \m -> ( m, Cmd.none )
 
         MoveTrackDown id ->
             let
-                track =
-                    ListX.find (\( rowId, _ ) -> rowId == id) model.tracks
-
                 mayMoveDown t =
-                    let
-                        idx =
-                            ListX.elemIndex t model.tracks
-                    in
-                        case idx of
-                            Nothing ->
-                                False
-
-                            Just i ->
-                                i < ((List.length model.tracks) - 2)
+                    ListX.elemIndex t model.tracks
+                        |> Maybe.map (\i -> i < (List.length model.tracks) - 2)
+                        |> Maybe.withDefault False
             in
-                case track of
-                    Nothing ->
-                        ( model, Cmd.none )
-
-                    Just t ->
-                        ( { model
-                            | tracks =
-                                if (mayMoveDown t) then
-                                    moveDown model.tracks t
-                                else
-                                    model.tracks
-                          }
-                        , Cmd.none
+                ListX.find (\( rowId, _ ) -> rowId == id) model.tracks
+                    |> Maybe.map
+                        (\t ->
+                            { model
+                                | tracks =
+                                    if (mayMoveDown t) then
+                                        moveDown model.tracks t
+                                    else
+                                        model.tracks
+                            }
                         )
+                    |> Maybe.withDefault model
+                    |> \m -> ( m, Cmd.none )
 
         ModifyTrack id trackRowMsg ->
-            case (updateTrackRow id trackRowMsg model) of
-                Just ( updTrack, Nothing ) ->
-                    ( maybeAddPristine
-                        { model
-                            | tracks =
-                                ListX.replaceIf (\( i, _ ) -> i == id)
-                                    ( id, updTrack )
-                                    model.tracks
-                        }
-                    , Cmd.none
-                    )
+            case (modifyTrack id trackRowMsg model) of
+                Just ( updModel, Nothing ) ->
+                    ( model, Cmd.none )
 
-                Just ( _, Just dispatchMsg ) ->
-                    handleDispatch id dispatchMsg model
+                Just ( updModel, Just dispatchMsg ) ->
+                    handleDispatch id dispatchMsg updModel
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
 
-updateTrackRow : TrackRowId -> TrackRow.Msg -> Model -> Maybe ( TrackRow.Model, Maybe TrackRow.DispatchMsg )
-updateTrackRow id msg model =
+modifyTrack : TrackRowId -> TrackRow.Msg -> Model -> Maybe ( Model, Maybe TrackRow.DispatchMsg )
+modifyTrack id msg model =
     ListX.find (\( trackId, _ ) -> id == trackId) model.tracks
         |> Maybe.map (\( _, trackModel ) -> TrackRow.update msg trackModel)
+        |> Maybe.map
+            (\( updTrack, dispatchMsg ) ->
+                ( maybeAddPristine
+                    { model
+                        | tracks =
+                            ListX.replaceIf (\( i, _ ) -> i == id)
+                                ( id, updTrack )
+                                model.tracks
+                    }
+                , dispatchMsg
+                )
+            )
 
 
 handleDispatch : TrackRowId -> TrackRow.DispatchMsg -> Model -> ( Model, Cmd Msg )
@@ -280,11 +261,11 @@ view model =
             , div [ class "form-group" ]
                 [ div [ class "col-sm-offset-2 col-sm-10" ]
                     [ button
-                        [ class "btn btn-default"
+                        [ class "btn btn-primary"
                         , type' "button"
                         , onClick SaveAlbum
                         ]
-                        [ text "Saves" ]
+                        [ text "Save" ]
                     ]
                 ]
             ]
@@ -338,35 +319,15 @@ trackRow ( id, rowModel ) =
 
 moveUp : List a -> a -> List a
 moveUp elems elem =
-    let
-        idx =
-            ListX.elemIndex elem elems
-    in
-        case idx of
-            Nothing ->
-                elems
-
-            Just x ->
-                let
-                    ( a, b ) =
-                        ListX.splitAt (x - 1) elems
-                in
-                    List.concat [ a, [ elem ], (ListX.removeWhen ((==) elem) b) ]
+    ListX.elemIndex elem elems
+        |> Maybe.map (\x -> ListX.splitAt (x - 1) elems)
+        |> Maybe.map (\( a, b ) -> a ++ [ elem ] ++ ListX.removeWhen ((==) elem) b)
+        |> Maybe.withDefault elems
 
 
 moveDown : List a -> a -> List a
 moveDown elems elem =
-    let
-        idx =
-            ListX.elemIndex elem elems
-    in
-        case idx of
-            Nothing ->
-                elems
-
-            Just x ->
-                let
-                    ( a, b ) =
-                        ListX.splitAt (x + 2) elems
-                in
-                    List.concat [ (ListX.removeWhen ((==) elem) a), [ elem ], b ]
+    ListX.elemIndex elem elems
+        |> Maybe.map (\x -> ListX.splitAt (x + 2) elems)
+        |> Maybe.map (\( a, b ) -> ListX.removeWhen ((==) elem) a ++ [ elem ] ++ b)
+        |> Maybe.withDefault elems

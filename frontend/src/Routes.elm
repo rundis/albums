@@ -17,11 +17,6 @@ type Route
     | NewArtistPage
     | AlbumDetailPage Int
     | NewArtistAlbumPage Int
-    | EmptyRoute
-
-
-
---routeParser : List (Matcher Route)
 
 
 routeParser : Parser (Route -> a) a
@@ -34,10 +29,6 @@ routeParser =
         , format ArtistListingPage (s "artists")
         , format AlbumDetailPage (s "albums" </> int)
         ]
-
-
-
---parse identity routeParser "artists"
 
 
 decode : Location -> Result String Route
@@ -66,12 +57,9 @@ encode route =
         NewArtistAlbumPage i ->
             "/artists/" ++ (toString i) ++ "/albums/new"
 
-        EmptyRoute ->
-            ""
 
-
-redirect : Route -> Cmd msg
-redirect route =
+navigate : Route -> Cmd msg
+navigate route =
     Navigation.newUrl (encode route)
 
 
@@ -103,8 +91,7 @@ catchNavigationClicks tagger =
 pathDecoder : Json.Decoder String
 pathDecoder =
     Json.oneOf
-        [ Json.at [ "dataset", "navigate" ] Json.string
-        , Json.at [ "data-navigate" ] Json.string
+        [ Json.at [ "data-navigate" ] Json.string
         , Json.at [ "parentElement" ] (lazy (\_ -> pathDecoder))
         , Json.fail "no path found for click"
         ]

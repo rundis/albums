@@ -4,7 +4,7 @@ import ServerApi exposing (Artist, ArtistRequest, Album, getArtist, updateArtist
 import Routes
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, targetValue)
+import Html.Events exposing (onClick, onInput, targetValue, on)
 import Http
 
 
@@ -16,9 +16,7 @@ type alias Model =
 
 
 type Msg
-    = NoOp
-    | GetArtist Int
-    | FetchArtistFailed Http.Error
+    = FetchArtistFailed Http.Error
     | ShowArtist Artist
     | SetArtistName String
     | SaveArtist
@@ -44,12 +42,6 @@ mountShowCmd id =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
-        NoOp ->
-            ( model, Cmd.none )
-
-        GetArtist id ->
-            ( model, mountShowCmd id )
-
         -- TODO: Show error
         FetchArtistFailed err ->
             ( model, Cmd.none )
@@ -79,7 +71,7 @@ update action model =
                 | id = Just artist.id
                 , name = artist.name
               }
-            , Routes.redirect Routes.ArtistListingPage
+            , Routes.navigate Routes.ArtistListingPage
             )
 
         SaveFailed err ->
@@ -115,7 +107,7 @@ pageTitle : Model -> String
 pageTitle model =
     case model.id of
         Just x ->
-            "Edit artists"
+            "Edit artist"
 
         Nothing ->
             "New artist"
@@ -140,7 +132,7 @@ view model =
             , div [ class "form-group" ]
                 [ div [ class "col-sm-offset-2 col-sm-10" ]
                     [ button
-                        [ class "btn btn-default"
+                        [ class "btn btn-primary"
                         , type' "button"
                         , onClick SaveArtist
                         ]
@@ -163,7 +155,9 @@ newAlbumButton model =
         Just x ->
             Routes.linkTo (Routes.NewArtistAlbumPage x)
                 [ class "pull-right btn btn-default" ]
-                [ text "New Album" ]
+                [ i [ class "glyphicon glyphicon-plus" ] []
+                , text " New Album"
+                ]
 
 
 albumListing : Model -> Html Msg

@@ -54,8 +54,8 @@ isPristine model =
 
 
 update : Msg -> Model -> ( Model, Maybe DispatchMsg )
-update action model =
-    case action of
+update msg model =
+    case msg of
         SetTrackName v ->
             ( { model | name = v, status = Modified }, Nothing )
 

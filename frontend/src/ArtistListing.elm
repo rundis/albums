@@ -63,6 +63,28 @@ update action model =
 ------ VIEW ------
 
 
+view : Model -> Html Msg
+view model =
+    div []
+        [ h1 [] [ text "Artists" ]
+        , Routes.linkTo Routes.NewArtistPage
+            [ class "pull-right btn btn-default" ]
+            [ i [ class "glyphicon glyphicon-plus" ] []
+            , text " New Artist"
+            ]
+        , table [ class "table table-striped" ]
+            [ thead []
+                [ tr []
+                    [ th [] [ text "Name" ]
+                    , th [] []
+                    , th [] []
+                    ]
+                ]
+            , tbody [] (List.map artistRow model.artists)
+            ]
+        ]
+
+
 artistRow : Artist -> Html Msg
 artistRow artist =
     tr []
@@ -78,25 +100,5 @@ artistRow artist =
                 , onClick <| DeleteArtist (.id artist)
                 ]
                 [ text "Delete!" ]
-            ]
-        ]
-
-
-view : Model -> Html Msg
-view model =
-    div []
-        [ h1 [] [ text "Artists" ]
-        , Routes.linkTo Routes.NewArtistPage
-            [ class "pull-right btn btn-default" ]
-            [ text "New Artist" ]
-        , table [ class "table table-striped" ]
-            [ thead []
-                [ tr []
-                    [ th [] [ text "Name" ]
-                    , th [] []
-                    , th [] []
-                    ]
-                ]
-            , tbody [] (List.map artistRow model.artists)
             ]
         ]
