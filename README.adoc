@@ -53,10 +53,12 @@ You may test that it's up and running by `curl http://localhost:8081/artists/1`
 === Frontend
 . Open a terminal and cd to `$albums/frontend`
 . `elm-package install --yes`
-. `elm-make Main.elm --output main.js`
-. `elm-reactor`
+. `npm install`
+. `npm run dev`
 
-Open a browser window with the following url: `http://localhost:8000/index.html`
+Open a browser window with the following url: `http://localhost:8090/`
+
+You should now be able to do changes on .elm files, and upon save get live reload.
 
 
 
