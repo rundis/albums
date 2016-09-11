@@ -1,5 +1,4 @@
 frontend/elm-stuff
-frontend/*.js
 frontend/node_modules
 frontend/dist
 backend/.stack-work
