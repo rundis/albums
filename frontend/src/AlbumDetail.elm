@@ -150,7 +150,7 @@ update msg model =
         ModifyTrack id trackRowMsg ->
             case (modifyTrack id trackRowMsg model) of
                 Just ( updModel, Nothing ) ->
-                    ( model, Cmd.none )
+                    ( updModel, Cmd.none )
 
                 Just ( updModel, Just dispatchMsg ) ->
                     handleDispatch id dispatchMsg updModel
