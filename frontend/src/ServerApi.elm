@@ -1,9 +1,8 @@
 module ServerApi exposing (..)
 
-import Json.Decode as JsonD exposing ((:=))
+import Json.Decode as JsonD
 import Json.Encode as JsonE
 import Http
-import Task
 
 
 type alias ArtistRequest a =
@@ -43,51 +42,61 @@ baseUrl =
     "http://localhost:8081"
 
 
-getArtist : Int -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
-getArtist id errorMsg msg =
-    Http.get artistDecoder (baseUrl ++ "/artists/" ++ toString id)
-        |> Task.perform errorMsg msg
+
+getArtist : Int -> (Result Http.Error Artist -> msg) -> Cmd msg
+getArtist id msg =
+    Http.get (baseUrl ++ "/artists/" ++ toString id) artistDecoder
+        |> Http.send msg
 
 
-getArtists : (Http.Error -> msg) -> (List Artist -> msg) -> Cmd msg
-getArtists errorMsg msg =
-    Http.get artistsDecoder (baseUrl ++ "/artists")
-        |> Task.perform errorMsg msg
+
+getArtists : (Result Http.Error (List Artist) -> msg) -> Cmd msg
+getArtists msg =
+    Http.get (baseUrl ++ "/artists") artistsDecoder
+        |> Http.send msg
 
 
-createArtist : ArtistRequest a -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
-createArtist artist errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "POST"
-        , url = baseUrl ++ "/artists"
-        , body = Http.string (encodeArtist artist)
-        , headers = [ ( "Content-Type", "application/json" ) ]
-        }
-        |> Http.fromJson artistDecoder
-        |> Task.perform errorMsg msg
 
 
-updateArtist : Artist -> (Http.Error -> msg) -> (Artist -> msg) -> Cmd msg
-updateArtist artist errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "PUT"
+createArtist : ArtistRequest a -> (Result Http.Error Artist -> msg) -> Cmd msg
+createArtist artist msg =
+    Http.post
+        (baseUrl ++ "/artists")
+        (Http.stringBody "application/json" <| encodeArtist artist)
+        artistDecoder
+        |> Http.send msg
+
+
+
+
+updateArtist: Artist -> (Result Http.Error Artist -> msg) -> Cmd msg
+updateArtist artist msg =
+    Http.request
+        { method = "PUT"
+        , headers = [Http.header "Content-Type" "application/json"]
         , url = baseUrl ++ "/artists/" ++ toString artist.id
-        , body = Http.string (encodeArtist artist)
-        , headers = [ ( "Content-Type", "application/json" ) ]
+        , body = Http.stringBody "application/json" <| encodeArtist artist
+        , expect = Http.expectJson artistDecoder
+        , timeout = Nothing
+        , withCredentials = False
         }
-        |> Http.fromJson artistDecoder
-        |> Task.perform errorMsg msg
+        |> Http.send msg
 
 
-deleteArtist : Int -> msg -> msg -> Cmd msg
-deleteArtist id errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "DELETE"
-        , url = baseUrl ++ "/artists/" ++ toString id
-        , body = Http.empty
+
+
+deleteArtist : Int -> (Result Http.Error String -> msg) -> Cmd msg
+deleteArtist id  msg =
+    Http.request
+        { method = "DELETE"
         , headers = []
+        , url = baseUrl ++ "/artists/" ++ toString id
+        , body = Http.emptyBody
+        , expect = Http.expectString
+        , timeout = Nothing
+        , withCredentials = False
         }
-        |> Task.perform (\_ -> errorMsg) (\_ -> msg)
+        |> Http.send msg
 
 
 artistsDecoder : JsonD.Decoder (List Artist)
@@ -97,9 +106,9 @@ artistsDecoder =
 
 artistDecoder : JsonD.Decoder Artist
 artistDecoder =
-    JsonD.object2 Artist
-        ("artistId" := JsonD.int)
-        ("artistName" := JsonD.string)
+    JsonD.map2 Artist
+        (JsonD.field "artistId" JsonD.int)
+        (JsonD.field "artistName" JsonD.string)
 
 
 encodeArtist : ArtistRequest a -> String
@@ -110,51 +119,52 @@ encodeArtist a =
             ]
 
 
-getAlbum : Int -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
-getAlbum id errorMsg msg =
-    Http.get albumDecoder (baseUrl ++ "/albums/" ++ toString id)
-        |> Task.perform errorMsg msg
+getAlbum : Int -> (Result Http.Error Album -> msg) -> Cmd msg
+getAlbum id msg =
+    Http.get (baseUrl ++ "/albums/" ++ toString id) albumDecoder
+        |> Http.send msg
 
 
-getAlbumsByArtist : Int -> (Http.Error -> msg) -> (List Album -> msg) -> Cmd msg
-getAlbumsByArtist artistId errorMsg msg =
-    Http.get albumsDecoder (baseUrl ++ "/albums?artistId=" ++ toString artistId)
-        |> Task.perform errorMsg msg
+getAlbumsByArtist : Int -> (Result Http.Error (List Album) -> msg) -> Cmd msg
+getAlbumsByArtist artistId msg =
+    Http.get (baseUrl ++ "/albums?artistId=" ++ toString artistId) albumsDecoder
+        |> Http.send msg
 
 
-updateAlbum : Album -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
-updateAlbum album errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "PUT"
+
+createAlbum : AlbumRequest a -> (Result Http.Error Album -> msg) -> Cmd msg
+createAlbum album msg =
+    Http.post
+        (baseUrl ++ "/albums")
+        (Http.stringBody "application/json" <| encodeAlbum album)
+        albumDecoder
+        |> Http.send msg
+
+updateAlbum: Album -> (Result Http.Error Album -> msg) -> Cmd msg
+updateAlbum album msg =
+    Http.request
+        { method = "PUT"
+        , headers = [Http.header "Content-Type" "application/json"]
         , url = baseUrl ++ "/albums/" ++ toString album.id
-        , body = Http.string (encodeAlbum album)
-        , headers = [ ( "Content-Type", "application/json" ) ]
+        , body = Http.stringBody "application/json" <| encodeAlbum album
+        , expect = Http.expectJson albumDecoder
+        , timeout = Nothing
+        , withCredentials = False
         }
-        |> Http.fromJson albumDecoder
-        |> Task.perform errorMsg msg
+        |> Http.send msg
 
-
-createAlbum : AlbumRequest a -> (Http.Error -> msg) -> (Album -> msg) -> Cmd msg
-createAlbum album errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "POST"
-        , url = baseUrl ++ "/albums"
-        , body = Http.string (encodeAlbum album)
-        , headers = [ ( "Content-Type", "application/json" ) ]
-        }
-        |> Http.fromJson albumDecoder
-        |> Task.perform errorMsg msg
-
-
-deleteAlbum : Int -> msg -> msg -> Cmd msg
-deleteAlbum id errorMsg msg =
-    Http.send Http.defaultSettings
-        { verb = "DELETE"
-        , url = baseUrl ++ "/albums/" ++ toString id
-        , body = Http.empty
+deleteAlbum : Int -> (Result Http.Error String -> msg) -> Cmd msg
+deleteAlbum id  msg =
+    Http.request
+        { method = "DELETE"
         , headers = []
+        , url = baseUrl ++ "/albums/" ++ toString id
+        , body = Http.emptyBody
+        , expect = Http.expectString
+        , timeout = Nothing
+        , withCredentials = False
         }
-        |> Task.perform (\_ -> errorMsg) (\_ -> msg)
+        |> Http.send msg
 
 
 albumsDecoder : JsonD.Decoder (List Album)
@@ -164,18 +174,18 @@ albumsDecoder =
 
 albumDecoder : JsonD.Decoder Album
 albumDecoder =
-    JsonD.object4 Album
-        ("albumId" := JsonD.int)
-        ("albumName" := JsonD.string)
-        ("albumArtistId" := JsonD.int)
-        ("albumTracks" := JsonD.list trackDecoder)
+    JsonD.map4 Album
+        (JsonD.field "albumId"  JsonD.int)
+        (JsonD.field "albumName"  JsonD.string)
+        (JsonD.field "albumArtistId"  JsonD.int)
+        (JsonD.field "albumTracks" <| JsonD.list trackDecoder)
 
 
 trackDecoder : JsonD.Decoder Track
 trackDecoder =
-    JsonD.object2 Track
-        ("trackName" := JsonD.string)
-        ("trackDuration" := JsonD.int)
+    JsonD.map2 Track
+        (JsonD.field "trackName" JsonD.string)
+        (JsonD.field "trackDuration" JsonD.int)
 
 
 encodeAlbum : AlbumRequest a -> String
