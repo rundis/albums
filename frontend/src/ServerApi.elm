@@ -73,7 +73,7 @@ updateArtist: Artist -> (Result Http.Error Artist -> msg) -> Cmd msg
 updateArtist artist msg =
     Http.request
         { method = "PUT"
-        , headers = [Http.header "Content-Type" "application/json"]
+        , headers = []
         , url = baseUrl ++ "/artists/" ++ toString artist.id
         , body = Http.stringBody "application/json" <| encodeArtist artist
         , expect = Http.expectJson artistDecoder
@@ -144,7 +144,7 @@ updateAlbum: Album -> (Result Http.Error Album -> msg) -> Cmd msg
 updateAlbum album msg =
     Http.request
         { method = "PUT"
-        , headers = [Http.header "Content-Type" "application/json"]
+        , headers = []
         , url = baseUrl ++ "/albums/" ++ toString album.id
         , body = Http.stringBody "application/json" <| encodeAlbum album
         , expect = Http.expectJson albumDecoder
