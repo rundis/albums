@@ -16,11 +16,9 @@ type alias Model =
 
 type Msg
     = Show
-    | HandleArtistsRetrieved (List Artist)
-    | FetchArtistsFailed Http.Error
+    | HandleArtistsRetrieved (Result Http.Error (List Artist))
     | DeleteArtist Int
-    | HandleArtistDeleted
-    | DeleteFailed
+    | HandleArtistDeleted (Result Http.Error String)
 
 
 init : Model
@@ -30,7 +28,7 @@ init =
 
 mountCmd : Cmd Msg
 mountCmd =
-    ServerApi.getArtists FetchArtistsFailed HandleArtistsRetrieved
+    ServerApi.getArtists HandleArtistsRetrieved
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -39,24 +37,33 @@ update action model =
         Show ->
             ( model, mountCmd )
 
-        HandleArtistsRetrieved artists ->
-            ( { model | artists = artists }
-            , Cmd.none
-            )
+        HandleArtistsRetrieved res ->
+            case res of
+                Result.Ok artists ->
+                    ( { model | artists = artists }
+                    , Cmd.none
+                    )
 
-        -- Handle error
-        FetchArtistsFailed err ->
-            ( model, Cmd.none )
+                Result.Err err ->
+                    let _ = Debug.log "Error retrieving artist" err
+                    in
+                        (model, Cmd.none)
+
 
         DeleteArtist id ->
-            ( model, deleteArtist id DeleteFailed HandleArtistDeleted )
+            ( model, deleteArtist id HandleArtistDeleted )
 
-        HandleArtistDeleted ->
-            update Show model
+        HandleArtistDeleted res ->
+            case res of
+                Result.Ok _ ->
+                    update Show model
 
-        -- Show generic error
-        DeleteFailed ->
-            ( model, Cmd.none )
+                Result.Err err ->
+                    let _ = Debug.log "Error deleting artist" err
+                    in
+                        (model, Cmd.none)
+
+
 
 
 
