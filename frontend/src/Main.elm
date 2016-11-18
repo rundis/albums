@@ -7,17 +7,16 @@ import Home
 import Routes exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.App as App
+import Html
 import Navigation
 
 
-main : Program Never
+main : Program Never Model Msg
 main =
-    Navigation.program (Navigation.makeParser Routes.decode)
+    Navigation.program UrlChange
         { init = init
         , view = view
         , update = update
-        , urlUpdate = urlUpdate
         , subscriptions = \_ -> Sub.none
         }
 
@@ -37,6 +36,7 @@ type Msg
     | ArtistDetailMsg ArtistDetail.Msg
     | AlbumDetailMsg AlbumDetail.Msg
     | Navigate String
+    | UrlChange Navigation.Location
 
 
 initialModel : Model
@@ -49,9 +49,10 @@ initialModel =
     }
 
 
-init : Result String Route -> ( Model, Cmd Msg )
-init result =
-    urlUpdate result initialModel
+init : Navigation.Location -> ( Model, Cmd Msg )
+init loc =
+    update (UrlChange loc) initialModel
+    --urlUpdate result initialModel
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,39 +90,42 @@ update msg model =
                 { model | albumDetailModel = subMdl }
                     ! [ Cmd.map AlbumDetailMsg subCmd ]
 
+        UrlChange loc ->
+            urlUpdate loc model
+
         Navigate url ->
             model ! [ Navigation.newUrl url ]
 
 
-urlUpdate : Result String Route -> Model -> ( Model, Cmd Msg )
-urlUpdate result model =
-    case result of
-        Err _ ->
+urlUpdate : Navigation.Location -> Model -> ( Model, Cmd Msg )
+urlUpdate loc model =
+    case (Routes.decode loc) of
+        Nothing  ->
             model ! [ Navigation.modifyUrl (Routes.encode model.route) ]
 
-        Ok (ArtistListingPage as route) ->
+        Just (ArtistListingPage as route) ->
             { model | route = route }
                 ! [ Cmd.map ArtistListingMsg ArtistListing.mountCmd ]
 
-        Ok ((ArtistDetailPage artistId) as route) ->
+        Just ((ArtistDetailPage artistId) as route) ->
             { model | route = route }
                 ! [ Cmd.map ArtistDetailMsg <| ArtistDetail.mountShowCmd artistId ]
 
-        Ok (NewArtistPage as route) ->
+        Just (NewArtistPage as route) ->
             { model | route = route, artistDetailModel = ArtistDetail.init } ! []
 
-        Ok ((AlbumDetailPage albumId) as route) ->
+        Just ((AlbumDetailPage albumId) as route) ->
             { model | route = route }
                 ! [ Cmd.map AlbumDetailMsg <| AlbumDetail.mountAlbumCmd albumId ]
 
-        Ok ((NewArtistAlbumPage artistId) as route) ->
+        Just ((NewArtistAlbumPage artistId) as route) ->
             { model
                 | route = route
                 , albumDetailModel = AlbumDetail.initForArtist artistId
             }
                 ! [ Cmd.map AlbumDetailMsg AlbumDetail.mountNewAlbumCmd ]
 
-        Ok route ->
+        Just route ->
             { model | route = route } ! []
 
 
@@ -163,19 +167,19 @@ contentView : Model -> Html Msg
 contentView model =
     case model.route of
         Home ->
-            App.map HomeMsg <| Home.view model.homeModel
+            Html.map HomeMsg <| Home.view model.homeModel
 
         ArtistListingPage ->
-            App.map ArtistListingMsg <| ArtistListing.view model.artistListingModel
+            Html.map ArtistListingMsg <| ArtistListing.view model.artistListingModel
 
         ArtistDetailPage i ->
-            App.map ArtistDetailMsg <| ArtistDetail.view model.artistDetailModel
+            Html.map ArtistDetailMsg <| ArtistDetail.view model.artistDetailModel
 
         NewArtistPage ->
-            App.map ArtistDetailMsg <| ArtistDetail.view model.artistDetailModel
+            Html.map ArtistDetailMsg <| ArtistDetail.view model.artistDetailModel
 
         AlbumDetailPage i ->
-            App.map AlbumDetailMsg <| AlbumDetail.view model.albumDetailModel
+            Html.map AlbumDetailMsg <| AlbumDetail.view model.albumDetailModel
 
         NewArtistAlbumPage i ->
-            App.map AlbumDetailMsg <| AlbumDetail.view model.albumDetailModel
+            Html.map AlbumDetailMsg <| AlbumDetail.view model.albumDetailModel
