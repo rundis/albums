@@ -1,13 +1,11 @@
 module Routes exposing (..)
 
-import UrlParser exposing (Parser, parse, (</>), format, int, oneOf, s, string)
+import UrlParser exposing (Parser, (</>), int, oneOf, s)
 import Navigation exposing (Location)
-import String
 import Html.Attributes exposing (href, attribute)
 import Html exposing (Html, Attribute, a)
 import Html.Events exposing (onWithOptions)
 import Json.Decode as Json
-import Json.Decode.Extra exposing (lazy)
 
 
 type Route
@@ -21,19 +19,23 @@ type Route
 
 routeParser : Parser (Route -> a) a
 routeParser =
-    oneOf
-        [ format Home (s "")
-        , format NewArtistPage (s "artists" </> s "new")
-        , format NewArtistAlbumPage (s "artists" </> int </> s "albums" </> s "new")
-        , format ArtistDetailPage (s "artists" </> int)
-        , format ArtistListingPage (s "artists")
-        , format AlbumDetailPage (s "albums" </> int)
+    UrlParser.oneOf
+        [ UrlParser.map Home (s "")
+        , UrlParser.map NewArtistPage (s "artists" </> s "new")
+        , UrlParser.map NewArtistAlbumPage (s "artists" </> int </> s "albums" </> s "new")
+        , UrlParser.map ArtistDetailPage (s "artists" </> int)
+        , UrlParser.map ArtistListingPage (s "artists")
+        , UrlParser.map AlbumDetailPage (s "albums" </> int)
         ]
 
 
-decode : Location -> Result String Route
+decode : Location -> Maybe Route
 decode location =
-    parse identity routeParser (String.dropLeft 1 location.pathname)
+    UrlParser.parsePath routeParser location
+
+
+
+--parse identity routeParser (String.dropLeft 1 location.pathname)
 
 
 encode : Route -> String
@@ -92,6 +94,6 @@ pathDecoder : Json.Decoder String
 pathDecoder =
     Json.oneOf
         [ Json.at [ "data-navigate" ] Json.string
-        , Json.at [ "parentElement" ] (lazy (\_ -> pathDecoder))
+        , Json.at [ "parentElement" ] (Json.lazy (\_ -> pathDecoder))
         , Json.fail "no path found for click"
         ]
