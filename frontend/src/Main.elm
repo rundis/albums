@@ -52,7 +52,7 @@ initialModel =
 init : Navigation.Location -> ( Model, Cmd Msg )
 init loc =
     update (UrlChange loc) initialModel
-    --urlUpdate result initialModel
+
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
