@@ -16,16 +16,15 @@ type alias Model =
 
 
 type Msg
-    = FetchArtistFailed Http.Error
-    | ShowArtist Artist
+    = ShowArtist (Result Http.Error Artist)
     | SetArtistName String
     | SaveArtist
-    | HandleSaved Artist
+    | HandleSaved (Result Http.Error Artist)
     | SaveFailed Http.Error
-    | HandleAlbumsRetrieved (List Album)
+    | HandleAlbumsRetrieved (Result Http.Error (List Album))
     | FetchAlbumsFailed Http.Error
     | DeleteAlbum Int
-    | HandleAlbumDeleted
+    | HandleAlbumDeleted (Result Http.Error String)
     | DeleteFailed
 
 
@@ -36,43 +35,55 @@ init =
 
 mountShowCmd : Int -> Cmd Msg
 mountShowCmd id =
-    getArtist id FetchArtistFailed ShowArtist
+    getArtist id ShowArtist
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update action model =
     case action of
-        -- TODO: Show error
-        FetchArtistFailed err ->
-            ( model, Cmd.none )
 
         -- TODO: Show error
         FetchAlbumsFailed err ->
             ( model, Cmd.none )
 
-        ShowArtist artist ->
-            ( { model
-                | id = Just artist.id
-                , name = artist.name
-              }
-            , getAlbumsByArtist artist.id FetchAlbumsFailed HandleAlbumsRetrieved
-            )
+        ShowArtist res ->
+            case res of
+                Result.Ok artist ->
+                    ( { model
+                        | id = Just artist.id
+                        , name = artist.name
+                      }
+                    , getAlbumsByArtist artist.id HandleAlbumsRetrieved
+                    )
+
+                Result.Err err ->
+                    let _ = Debug.log "Error retrieving artist" err
+                    in
+                        (model, Cmd.none)
 
         SaveArtist ->
             case model.id of
                 Just id ->
-                    ( model, updateArtist (Artist id model.name) SaveFailed HandleSaved )
+                    ( model, updateArtist (Artist id model.name) HandleSaved )
 
                 Nothing ->
-                    ( model, createArtist { name = model.name } SaveFailed HandleSaved )
+                    ( model, createArtist { name = model.name } HandleSaved )
 
-        HandleSaved artist ->
-            ( { model
-                | id = Just artist.id
-                , name = artist.name
-              }
-            , Routes.navigate Routes.ArtistListingPage
-            )
+        HandleSaved res ->
+            case res of
+                Result.Ok artist ->
+                    ( { model
+                        | id = Just artist.id
+                        , name = artist.name
+                      }
+                    , Routes.navigate Routes.ArtistListingPage
+                    )
+
+                Result.Err err ->
+                    let _ = Debug.log "Error saving artist" err
+                    in
+                        (model, Cmd.none)
+
 
         SaveFailed err ->
             ( model, Cmd.none )
@@ -82,21 +93,35 @@ update action model =
             , Cmd.none
             )
 
-        HandleAlbumsRetrieved albums_ ->
-            ( { model | albums = albums_ }
-            , Cmd.none
-            )
+        HandleAlbumsRetrieved res ->
+            case res of
+                Result.Ok albums ->
+                    ( { model | albums = albums }
+                    , Cmd.none
+                    )
+
+                Result.Err err ->
+                    let _ = Debug.log "Error retrieving albums" err
+                    in
+                        (model, Cmd.none)
 
         DeleteAlbum id ->
-            ( model, deleteAlbum id DeleteFailed HandleAlbumDeleted )
+            ( model, deleteAlbum id HandleAlbumDeleted )
 
-        HandleAlbumDeleted ->
-            case model.id of
-                Nothing ->
-                    ( model, Cmd.none )
+        HandleAlbumDeleted res ->
+            case res of
+                Result.Ok _ ->
+                    case model.id of
+                        Nothing ->
+                            ( model, Cmd.none )
 
-                Just id ->
-                    ( model, getAlbumsByArtist id FetchAlbumsFailed HandleAlbumsRetrieved )
+                        Just id ->
+                            ( model, getAlbumsByArtist id HandleAlbumsRetrieved )
+
+                Result.Err err ->
+                    let _ = Debug.log "Error deleting artist" err
+                    in
+                        (model, Cmd.none)
 
         -- Show generic error
         DeleteFailed ->
