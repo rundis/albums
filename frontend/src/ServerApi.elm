@@ -104,8 +104,8 @@ artistDecoder =
 
 encodeArtist : ArtistRequest a -> String
 encodeArtist a =
-    JsonE.encode 0
-        <| JsonE.object
+    JsonE.encode 0 <|
+        JsonE.object
             [ ( "artistName", JsonE.string a.name )
             ]
 
@@ -180,8 +180,8 @@ trackDecoder =
 
 encodeAlbum : AlbumRequest a -> String
 encodeAlbum album =
-    JsonE.encode 0
-        <| JsonE.object
+    JsonE.encode 0 <|
+        JsonE.object
             [ ( "albumName", JsonE.string album.name )
             , ( "albumArtistId", JsonE.int album.artistId )
             , ( "albumTracks", JsonE.list <| List.map encodeTrack album.tracks )

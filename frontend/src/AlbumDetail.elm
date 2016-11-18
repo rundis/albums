@@ -29,7 +29,7 @@ type Msg
     = ShowAlbum Album
     | HandleArtistsRetrieved (List Artist)
     | FetchArtistsFailed Http.Error
-    | SetAlbumName (String)
+    | SetAlbumName String
     | SaveAlbum
     | HandleSaved Album
     | SaveFailed Http.Error
@@ -72,8 +72,8 @@ update msg model =
         ShowAlbum album ->
             ( createAlbumModel model album, Cmd.none )
 
-        HandleArtistsRetrieved artists' ->
-            ( { model | artists = artists' }
+        HandleArtistsRetrieved artists_ ->
+            ( { model | artists = artists_ }
             , Cmd.none
             )
 
@@ -262,7 +262,7 @@ view model =
                 [ div [ class "col-sm-offset-2 col-sm-10" ]
                     [ button
                         [ class "btn btn-primary"
-                        , type' "button"
+                        , type_ "button"
                         , onClick SaveAlbum
                         ]
                         [ text "Save" ]

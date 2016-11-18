@@ -24,7 +24,7 @@ type Msg
     | SaveFailed Http.Error
     | HandleAlbumsRetrieved (List Album)
     | FetchAlbumsFailed Http.Error
-    | DeleteAlbum (Int)
+    | DeleteAlbum Int
     | HandleAlbumDeleted
     | DeleteFailed
 
@@ -82,8 +82,8 @@ update action model =
             , Cmd.none
             )
 
-        HandleAlbumsRetrieved albums' ->
-            ( { model | albums = albums' }
+        HandleAlbumsRetrieved albums_ ->
+            ( { model | albums = albums_ }
             , Cmd.none
             )
 
@@ -133,7 +133,7 @@ view model =
                 [ div [ class "col-sm-offset-2 col-sm-10" ]
                     [ button
                         [ class "btn btn-primary"
-                        , type' "button"
+                        , type_ "button"
                         , onClick SaveArtist
                         ]
                         [ text "Save" ]

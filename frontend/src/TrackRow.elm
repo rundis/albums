@@ -137,12 +137,12 @@ moveUpView : Model -> Html Msg
 moveUpView model =
     button
         [ onClick (Dispatch MoveUp)
-        , class
-            <| "btn btn-sm btn-default "
-            ++ if isPristine model then
-                "disabled"
-               else
-                ""
+        , class <|
+            "btn btn-sm btn-default "
+                ++ if isPristine model then
+                    "disabled"
+                   else
+                    ""
         ]
         [ span [ class "glyphicon glyphicon-arrow-up" ] [] ]
 
@@ -151,12 +151,12 @@ moveDownView : Model -> Html Msg
 moveDownView model =
     button
         [ onClick (Dispatch MoveDown)
-        , class
-            <| "btn btn-sm btn-default "
-            ++ if isPristine model then
-                "disabled"
-               else
-                ""
+        , class <|
+            "btn btn-sm btn-default "
+                ++ if isPristine model then
+                    "disabled"
+                   else
+                    ""
         ]
         [ span [ class "glyphicon glyphicon-arrow-down" ] [] ]
 
@@ -206,12 +206,12 @@ removeView : Model -> Html Msg
 removeView model =
     button
         [ onClick (Dispatch Remove)
-        , class
-            <| "btn btn-sm btn-danger "
-            ++ if isPristine model then
-                "disabled"
-               else
-                ""
+        , class <|
+            "btn btn-sm btn-danger "
+                ++ if isPristine model then
+                    "disabled"
+                   else
+                    ""
         ]
         [ text "Remove" ]
 
