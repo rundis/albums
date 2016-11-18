@@ -4,7 +4,6 @@ import TrackRow
 import ServerApi exposing (Album, Track, AlbumRequest, Artist, getAlbum, updateAlbum, createAlbum, getArtists)
 import Routes
 import Html exposing (..)
-import Html.App
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, targetValue)
 import List.Extra as ListX
@@ -26,18 +25,15 @@ type alias TrackRowId =
 
 
 type Msg
-    = ShowAlbum Album
-    | HandleArtistsRetrieved (List Artist)
-    | FetchArtistsFailed Http.Error
+    = ShowAlbum (Result Http.Error Album)
+    | HandleArtistsRetrieved (Result Http.Error (List Artist))
     | SetAlbumName String
     | SaveAlbum
-    | HandleSaved Album
-    | SaveFailed Http.Error
+    | HandleSaved (Result Http.Error Album)
     | ModifyTrack TrackRowId TrackRow.Msg
     | RemoveTrack TrackRowId
     | MoveTrackUp TrackRowId
     | MoveTrackDown TrackRowId
-    | FetchAlbumFailed Http.Error
 
 
 init : Model
@@ -53,33 +49,42 @@ initForArtist artistId =
 mountAlbumCmd : Int -> Cmd Msg
 mountAlbumCmd id =
     Cmd.batch
-        [ getAlbum id FetchAlbumFailed ShowAlbum
-        , getArtists FetchArtistsFailed HandleArtistsRetrieved
+        [ getAlbum id  ShowAlbum
+        , getArtists HandleArtistsRetrieved
         ]
 
 
 mountNewAlbumCmd : Cmd Msg
 mountNewAlbumCmd =
-    getArtists FetchArtistsFailed HandleArtistsRetrieved
+    getArtists  HandleArtistsRetrieved
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        FetchAlbumFailed err ->
-            ( model, Cmd.none )
 
-        ShowAlbum album ->
-            ( createAlbumModel model album, Cmd.none )
+        ShowAlbum res ->
+            case res of
+                Result.Ok album ->
+                    ( createAlbumModel model album, Cmd.none )
 
-        HandleArtistsRetrieved artists_ ->
-            ( { model | artists = artists_ }
-            , Cmd.none
-            )
+                Result.Err err ->
+                    let _ = Debug.log "Error retrieving album" err
+                    in
+                        (model, Cmd.none)
 
-        -- TODO: show error
-        FetchArtistsFailed err ->
-            ( model, Cmd.none )
+        HandleArtistsRetrieved res ->
+            case res of
+                Result.Ok artists ->
+                    ( { model | artists = artists }
+                    , Cmd.none
+                    )
+
+                Result.Err err ->
+                    let _ = Debug.log "Error retrieving artists" err
+                    in
+                        (model, Cmd.none)
+
 
         SetAlbumName txt ->
             ( { model | name = txt }
@@ -90,7 +95,7 @@ update msg model =
             case ( model.id, model.artistId ) of
                 ( Just albumId, Just artistId ) ->
                     ( model
-                    , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) SaveFailed HandleSaved
+                    , updateAlbum (Album albumId model.name artistId (createTracks model.tracks)) HandleSaved
                     )
 
                 ( Nothing, Just artistId ) ->
@@ -100,20 +105,24 @@ update msg model =
                         , artistId = artistId
                         , tracks = (createTracks model.tracks)
                         }
-                        SaveFailed
                         HandleSaved
                     )
 
                 ( _, _ ) ->
                     Debug.crash "Missing artist.id, needs to be handled by validation"
 
-        HandleSaved album ->
-            ( createAlbumModel model album
-            , Routes.navigate (Routes.ArtistDetailPage album.artistId)
-            )
+        HandleSaved res ->
+            case res of
+                Result.Ok album ->
+                    ( createAlbumModel model album
+                    , Routes.navigate (Routes.ArtistDetailPage album.artistId)
+                    )
 
-        SaveFailed err ->
-            ( model, Cmd.none )
+                Result.Err err ->
+                    let _ = Debug.log "Error saving album" err
+                    in
+                        (model, Cmd.none)
+
 
         RemoveTrack id ->
             ( { model | tracks = List.filter (\( rowId, _ ) -> rowId /= id) model.tracks }
@@ -310,7 +319,7 @@ trackListing model =
 
 trackRow : ( TrackRowId, TrackRow.Model ) -> Html Msg
 trackRow ( id, rowModel ) =
-    Html.App.map (ModifyTrack id) (TrackRow.view rowModel)
+    Html.map (ModifyTrack id) (TrackRow.view rowModel)
 
 
 
@@ -321,7 +330,7 @@ moveUp : List a -> a -> List a
 moveUp elems elem =
     ListX.elemIndex elem elems
         |> Maybe.map (\x -> ListX.splitAt (x - 1) elems)
-        |> Maybe.map (\( a, b ) -> a ++ [ elem ] ++ ListX.removeWhen ((==) elem) b)
+        |> Maybe.map (\( a, b ) -> a ++ [ elem ] ++ ListX.filterNot ((==) elem) b)
         |> Maybe.withDefault elems
 
 
@@ -329,5 +338,5 @@ moveDown : List a -> a -> List a
 moveDown elems elem =
     ListX.elemIndex elem elems
         |> Maybe.map (\x -> ListX.splitAt (x + 2) elems)
-        |> Maybe.map (\( a, b ) -> ListX.removeWhen ((==) elem) a ++ [ elem ] ++ b)
+        |> Maybe.map (\( a, b ) -> ListX.filterNot ((==) elem) a ++ [ elem ] ++ b)
         |> Maybe.withDefault elems
